@@ -19,5 +19,6 @@ class ADSBCollector {
             it.properties.remove("class"); it.properties
         }])
         log.info("done")
+        System.exit(0)
     }
 }
