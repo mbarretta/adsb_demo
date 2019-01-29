@@ -1,0 +1,61 @@
+{
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "baroAltitude": {
+          "type": "float"
+        },
+        "callsign": {
+          "type": "keyword"
+        },
+        "geoAltitude": {
+          "type": "float"
+        },
+        "icao": {
+          "type": "keyword"
+        },
+        "lastContact": {
+          "type": "date",
+          "format": "epoch_second"
+        },
+        "location": {
+          "type": "geo_point"
+        },
+        "onGround": {
+          "type": "boolean"
+        },
+        "originCountry": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "positionSource": {
+          "type": "keyword"
+        },
+        "spi": {
+          "type": "boolean"
+        },
+        "squawk": {
+          "type": "keyword"
+        },
+        "timePosition": {
+          "type": "date",
+          "format": "epoch_second"
+        },
+        "trueTrack": {
+          "type": "float"
+        },
+        "velocity": {
+          "type": "float"
+        },
+        "verticalRate": {
+          "type": "float"
+        }
+      }
+    }
+  }
+}
