@@ -26,6 +26,7 @@ class OpenSkyNetworkClient {
         String squawk
         boolean spi
         PositionSource positionSource
+        String _id
     }
 
     static enum PositionSource {
@@ -45,8 +46,8 @@ class OpenSkyNetworkClient {
                 originCountry = state[2]?.trim()
                 timePosition = state[3]?.intValue() ?: 0
                 lastContact = state[4]?.intValue() ?: 0
-                location.lat = state[5] ?: 0f
-                location.lon = state[6] ?: 0f
+                location.lon = state[5] ?: 0f
+                location.lat = state[6] ?: 0f
                 baroAltitude = state[7]?.intValue() ?: 0
                 onGround = state[8]?.booleanValue() ?: false
                 velocity = state[9]?.floatValue() ?: 0f
@@ -57,6 +58,7 @@ class OpenSkyNetworkClient {
                 squawk = state[14]?.trim()
                 spi = state[15]?.booleanValue() ?: false
                 positionSource = positionSources[state[16].intValue()]
+                _id = lastContact + icao
             }
             objResponse.states << stateVector
         }
