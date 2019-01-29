@@ -10,6 +10,22 @@ class ADSBCollector {
     static void main(String[] args) {
         properties = new ConfigSlurper().parse(GroovyClassLoader.getSystemResource("properties.groovy"))
 
+        if (args && args[0] == "loop") {
+            loopIt()
+        } else {
+            doIt()
+        }
+        System.exit(0)
+    }
+
+    static void loopIt() {
+        while (true) {
+            doIt()
+            Thread.sleep(5000)
+        }
+    }
+
+    static void doIt() {
         log.info("fetching all states")
         def allStates = OpenSkyNetworkClient.getAllStates()
         log.info(" ...found [${allStates.states.size()}]")
@@ -19,6 +35,5 @@ class ADSBCollector {
             it.properties.remove("class"); it.properties
         }])
         log.info("done")
-        System.exit(0)
     }
 }
