@@ -1,16 +1,7 @@
 group 'com.barretta.elastic'
 version '1.0-SNAPSHOT'
 
-buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.0'
-    }
-}
 apply plugin: 'groovy'
-apply plugin: 'com.github.johnrengelman.shadow'
 
 repositories {
     mavenCentral()
@@ -36,4 +27,9 @@ task sourcesJar(type: Jar) {
 }
 tasks.withType(GroovyCompile) {
     groovyOptions.optimizationOptions.indy = true
+}
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.barretta.elastic.adsb.ADSBCollector'
+    }
 }
