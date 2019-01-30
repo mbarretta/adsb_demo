@@ -5,11 +5,10 @@ import groovy.util.logging.Slf4j
 
 @Slf4j
 class ADSBCollector {
-    private static def properties
+    private static def properties = new ConfigSlurper().parse(GroovyClassLoader.getSystemResource("properties.groovy"))
 
     static void main(String[] args) {
-        properties = new ConfigSlurper().parse(GroovyClassLoader.getSystemResource("properties.groovy"))
-
+        log.info("using properties:\n" + properties)
         if (args && args[0] == "loop") {
             loopIt()
         } else {

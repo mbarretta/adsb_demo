@@ -5,7 +5,7 @@ import spock.lang.Specification
 class ADSBCollectorTest extends Specification {
     def "DoIt"() {
         when:
-        new ADSBCollector().main()
+        new ADSBCollector().doIt()
 
         then:
         noExceptionThrown()
