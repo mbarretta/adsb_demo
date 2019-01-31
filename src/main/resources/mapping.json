@@ -54,6 +54,36 @@
         },
         "verticalRate": {
           "type": "float"
+        },
+        "arrivalAirportCandidatesCount": {
+          "type": "integer"
+        },
+        "departureAirportCandidatesCount": {
+          "type": "integer"
+        },
+        "estArrivalAirport": {
+          "type": "keyword"
+        },
+        "estArrivalAirportHorizDistance": {
+          "type": "integer"
+        },
+        "estArrivalAirportVertDistance": {
+          "type": "integer"
+        },
+        "estDepartureAirport": {
+          "type": "keyword"
+        },
+        "estDepartureAirportHorizDistance": {
+          "type": "integer"
+        },
+        "estDepartureAirportVertDistance": {
+          "type": "integer"
+        },
+        "firstSeen" : {
+          "type" : "long"
+        },
+        "lastSeen" : {
+          "type" : "long"
         }
       }
     }

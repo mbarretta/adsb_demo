@@ -12,4 +12,13 @@ class OpenSkyNetworkClientTest extends Specification {
         response != null
         response.states.size() > 0
     }
+
+    def "getAllFlights"() {
+        setup:
+        def response = OpenSkyNetworkClient.getAllFlights(1548855999)
+
+        expect:
+        response != null
+        response.flights.size() > 0
+    }
 }

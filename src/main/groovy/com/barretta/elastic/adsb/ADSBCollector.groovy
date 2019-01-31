@@ -10,17 +10,22 @@ class ADSBCollector {
     static void main(String[] args) {
         log.info("using properties:\n" + properties)
         if (args && args[0] == "loop") {
-            loopIt()
+            loopIt(args)
         } else {
             doIt()
         }
         System.exit(0)
     }
 
-    static void loopIt() {
+    static void loopIt(args) {
+        def rate = 10000l
+        if (args.length > 1 && args[1] && !args[1].isEmpty()) {
+            rate = Long.parseLong(args[1])
+        }
+
         while (true) {
             doIt()
-            Thread.sleep(5000)
+            Thread.sleep(rate)
         }
     }
 
@@ -29,10 +34,25 @@ class ADSBCollector {
         def allStates = OpenSkyNetworkClient.getAllStates()
         log.info(" ...found [${allStates.states.size()}]")
 
+        log.info("fetching all flights")
+        def allFlights = OpenSkyNetworkClient.getAllFlights(allStates.time)
+        log.info(" ...found [${allFlights.flights.size()}]")
+
+        log.info("joining states and flights")
+        def esRecord = allStates.states.inject([]) { list, state ->
+            def record = state.properties
+
+            def flight = allFlights.flights.find { it.icao == state.icao }
+            if (flight) {
+                record += flight.properties
+            }
+            list << record
+        }
+        log.info(" ...done")
+
+        log.info("loading ES")
         def client = new ESClient(properties.esClient as ESClient.Config)
-        client.bulk([(ESClient.BulkOps.INSERT): allStates.states.collect {
-            it.properties.remove("class"); it.properties
-        }])
-        log.info("done")
+        client.bulk([(ESClient.BulkOps.INSERT): esRecord])
+        log.info(" ...done")
     }
 }
