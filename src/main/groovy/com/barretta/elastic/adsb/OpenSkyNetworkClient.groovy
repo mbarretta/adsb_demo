@@ -95,7 +95,7 @@ class OpenSkyNetworkClient {
 
         //this try{} is a bit ugly, but simple means of dealing with empty results, which end are sent as a 404
         try {
-            def rawResponse = new JsonSlurper().parse("$URL/flights/all?begin=${time - 20}&end=$time".toURL())
+            def rawResponse = new JsonSlurper().parse("$URL/flights/all?begin=${time - 7200}&end=$time".toURL())
             rawResponse?.each { flight ->
                 try {
                     def flightObj = new Flight()
@@ -118,7 +118,7 @@ class OpenSkyNetworkClient {
                 }
             }
         } catch (JsonException e) {
-            log.debug("No data for timespan [${time - 20}] to [$time]", e)
+            log.debug("No data for timespan [${time - 7200}] to [$time]", e)
         }
         return response
     }
