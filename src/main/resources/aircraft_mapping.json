@@ -1,0 +1,125 @@
+{
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "acars": {
+          "type": "boolean"
+        },
+        "adsb": {
+          "type": "boolean"
+        },
+        "built": {
+          "type": "keyword"
+        },
+        "categoryDescription": {
+          "type": "keyword"
+        },
+        "engines": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "firstFlightDate": {
+          "type": "keyword"
+        },
+        "icao": {
+          "type": "keyword"
+        },
+        "icaoAircraftType": {
+          "type": "keyword"
+        },
+        "lineNumber": {
+          "type": "keyword"
+        },
+        "manufacturerIcao": {
+          "type": "keyword"
+        },
+        "manufacturerName": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "model": {
+          "type": "keyword"
+        },
+        "modes": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "text"
+        },
+        "operator": {
+          "type": "keyword"
+        },
+        "operatorCallsign": {
+          "type": "keyword"
+        },
+        "operatorIata": {
+          "type": "keyword"
+        },
+        "operatorIcao": {
+          "type": "keyword"
+        },
+        "owner": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "regUntil": {
+          "type": "keyword"
+        },
+        "registered": {
+          "type": "keyword"
+        },
+        "registration": {
+          "type": "keyword"
+        },
+        "seatConfiguration": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "serialNumber": {
+          "type": "keyword"
+        },
+        "status": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "testReg": {
+          "type": "keyword"
+        },
+        "typeCode": {
+          "type": "keyword"
+        }
+      }
+    }
+  },
+  "settings": {
+    "index": {
+      "number_of_shards": "1",
+      "number_of_replicas": "1"
+    }
+  }
+}

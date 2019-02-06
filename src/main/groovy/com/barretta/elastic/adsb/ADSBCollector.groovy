@@ -1,35 +1,48 @@
 package com.barretta.elastic.adsb
 
 import com.elastic.barretta.clients.ESClient
+import groovy.cli.commons.CliBuilder
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import groovyx.gpars.GParsExecutorsPool
+import org.elasticsearch.index.query.MatchAllQueryBuilder
+
+import java.util.concurrent.ConcurrentHashMap
 
 @Slf4j
 class ADSBCollector {
-    private static def properties = new ConfigSlurper().parse(GroovyClassLoader.getSystemResource("properties.groovy"))
 
+    //todo add setup option that creates the index templates, rollover, etc., plus the aircraft index from the csv
     static void main(String[] args) {
-        log.info("using properties:\n" + properties)
-        if (args && args[0] == "loop") {
-            loopIt(args)
+        def cli = new CliBuilder()
+        cli._(longOpt: "loop", "loop forever")
+        cli._(longOpt: "loop-interval", args: 1, argName: "seconds", defaultValue: 5000l, "seconds between loops")
+        cli.h(longOpt: "help")
+        def options = cli.parse(args)
+
+        if (options.loop) {
+            loopIt(Long.parseLong(options."loop-interval"))
         } else {
             doIt()
         }
         System.exit(0)
     }
 
-    static void loopIt(args) {
-        def rate = 10000l
-        if (args.length > 1 && args[1] && !args[1].isEmpty()) {
-            rate = Long.parseLong(args[1])
-        }
+    static void loopIt(long interval) {
+        log.info("caching all aircraft data")
+        getAllAircraft()
 
-        while (true) {
-            doIt()
-            Thread.sleep(rate)
+        GParsExecutorsPool.withPool {
+            while (true) {
+                it << { doIt() } as Runnable
+                log.trace("sleeping...")
+                Thread.sleep(interval)
+                log.trace("...done")
+            }
         }
     }
 
-    static void doIt() {
+    static def doIt() {
         log.info("fetching all states")
         def allStates = OpenSkyNetworkClient.getAllStates()
         log.info(" ...found [${allStates.states.size()}]")
@@ -38,21 +51,63 @@ class ADSBCollector {
         def allFlights = OpenSkyNetworkClient.getAllFlights(allStates.time)
         log.info(" ...found [${allFlights.flights.size()}]")
 
-        log.info("joining states and flights")
-        def esRecord = allStates.states.inject([]) { list, state ->
-            def record = state.properties
+        log.info("loading all aircraft data")
+        def allAircraft = getAllAircraft()
 
+        log.info("joining everything together")
+        def esRecords = allStates.states.inject([]) { list, state ->
+
+            /*
+            we're doing some field name transformation here as well so that state data has a "state." prefix,
+            flight data has "flight.", etc...
+            */
+            def record = [icao: state.icao]
+
+            //add state data
+            def stateFields = state.properties.collectEntries { [("state.${it.key}".toString()): it.value] }
+            stateFields.remove("state.icao")
+            stateFields.remove("state.class")
+            record += stateFields
+
+            //join flight data
             def flight = allFlights.flights.find { it.icao == state.icao }
             if (flight) {
-                record += flight.properties
+                def flightFields = flight.properties.collectEntries { [("flight.${it.key}".toString()): it.value] }
+                flightFields.remove("flight.icao")
+                flightFields.remove("flight.class")
+                record += flightFields
             }
+
+            //join aircraft data
+            if (allAircraft.containsKey(state.icao)) {
+                record += allAircraft.get(state.icao)
+            }
+
             list << record
         }
         log.info(" ...done")
 
-        log.info("loading ES")
-        def client = new ESClient(properties.esClient as ESClient.Config)
-        client.bulk([(ESClient.BulkOps.INSERT): esRecord])
+        log.info("bulking into ES")
+        def esConfig = PropertyManager.instance.properties.es as ESClient.Config
+        esConfig.index = PropertyManager.instance.properties.indices.opensky
+        def client = new ESClient(esConfig)
+        client.bulk([(ESClient.BulkOps.INSERT): esRecords])
         log.info(" ...done")
+    }
+
+    @Memoized
+    static def getAllAircraft() {
+        def esConfig = PropertyManager.instance.properties.es as ESClient.Config
+        esConfig.index = PropertyManager.instance.properties.indices.aircraft
+        def es = new ESClient(esConfig)
+
+        def aircraft = [:] as ConcurrentHashMap
+        es.scrollQuery(new MatchAllQueryBuilder(), 10000, 2, 1) { it ->
+            def map = it.getSourceAsMap()
+            if (map) {
+                aircraft.put(map.remove("icao"), map.collectEntries { [("aircraft.${it.key}".toString()): it.value] })
+            }
+        }
+        return aircraft
     }
 }
