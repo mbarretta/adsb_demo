@@ -14,27 +14,30 @@ class ADSBCollector {
 
     //todo add setup option that creates the index templates, rollover, etc., plus the aircraft index from the csv
     static void main(String[] args) {
-        def cli = new CliBuilder()
-        cli.loop(type: Boolean, "loop forever")
-        cli.loopInterval(args: 1, argName: "seconds", defaultValue: 5000l, type: Float, "seconds between loops")
+        def cli = new CliBuilder(usage: "adsb_demo")
+        cli.once("run once")
+        cli.loop("loop forever")
+        cli.loopInterval(args: 1, argName: "seconds","seconds between loops")
         cli.help("print this message")
         def options = cli.parse(args)
 
-        if (options.h) {
+        if (options.help) {
             cli.usage()
             System.exit(0)
         }
 
         if (options.loop) {
-            loopIt(Long.parseLong(options."loop-interval"))
-        } else {
+            def interval = options.loopInterval ? Integer.valueOf(options.loopInterval) : 5
+            loopIt(interval * 1000)
+        } else if (options.once) {
             doIt()
         }
 
         System.exit(0)
     }
 
-    static void loopIt(long interval) {
+    static void loopIt(int interval) {
+        log.info("Let's do this! Looping every [$interval] milliseconds")
         log.info("caching all aircraft data")
         getAllAircraft()
 
