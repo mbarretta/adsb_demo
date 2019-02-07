@@ -12,12 +12,14 @@ import java.util.concurrent.ConcurrentHashMap
 @Slf4j
 class ADSBCollector {
 
+    static def aircraft = [:] as ConcurrentHashMap
+
     //todo add setup option that creates the index templates, rollover, etc., plus the aircraft index from the csv
     static void main(String[] args) {
         def cli = new CliBuilder(usage: "adsb_demo")
         cli.once("run once")
         cli.loop("loop forever")
-        cli.loopInterval(args: 1, argName: "seconds","seconds between loops")
+        cli.loopInterval(args: 1, argName: "seconds", "seconds between loops")
         cli.help("print this message")
         def options = cli.parse(args)
 
@@ -61,7 +63,7 @@ class ADSBCollector {
         log.info(" ...found [${allFlights.flights.size()}]")
 
         log.info("loading all aircraft data")
-        def allAircraft = getAllAircraft()
+        getAllAircraft()
 
         log.info("joining everything together")
         def esRecords = allStates.states.inject([]) { list, state ->
@@ -88,8 +90,8 @@ class ADSBCollector {
             }
 
             //join aircraft data
-            if (allAircraft.containsKey(state.icao)) {
-                record += allAircraft.get(state.icao)
+            if (aircraft.containsKey(state.icao)) {
+                record += aircraft.get(state.icao)
             }
 
             list << record
@@ -104,19 +106,20 @@ class ADSBCollector {
         log.info(" ...done")
     }
 
-    @Memoized
     static def getAllAircraft() {
-        def esConfig = PropertyManager.instance.properties.es as ESClient.Config
-        esConfig.index = PropertyManager.instance.properties.indices.aircraft
-        def es = new ESClient(esConfig)
+        if (aircraft.isEmpty()) {
+            def esConfig = PropertyManager.instance.properties.es as ESClient.Config
+            esConfig.index = PropertyManager.instance.properties.indices.aircraft
+            def es = new ESClient(esConfig)
 
-        def aircraft = [:] as ConcurrentHashMap
-        es.scrollQuery(new MatchAllQueryBuilder(), 10000, 2, 1) { it ->
-            def map = it.getSourceAsMap()
-            if (map) {
-                aircraft.put(map.remove("icao"), map.collectEntries { [("aircraft.${it.key}".toString()): it.value] })
+            es.scrollQuery(new MatchAllQueryBuilder(), 5000, 2, 1) { it ->
+                def map = it.getSourceAsMap()
+                if (map) {
+                    aircraft.put(map.remove("icao"), map.collectEntries {
+                        [("aircraft.${it.key}".toString()): it.value]
+                    })
+                }
             }
         }
-        return aircraft
     }
 }
