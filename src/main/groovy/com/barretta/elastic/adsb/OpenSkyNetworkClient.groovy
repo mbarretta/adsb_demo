@@ -55,7 +55,7 @@ class OpenSkyNetworkClient {
     }
 
     static AllStateVectorsResponse getAllStates() {
-        def rawResponse = new JsonSlurper().parse("${PropertyManager.instance.properties.openSky.url}/states/all".toURL().)
+        def rawResponse = new JsonSlurper().parse("${PropertyManager.instance.properties.openSky.url}/states/all".toURL())
         def returnResponse = new AllStateVectorsResponse(time: rawResponse.time)
 
         def positionSources = PositionSource.values()
