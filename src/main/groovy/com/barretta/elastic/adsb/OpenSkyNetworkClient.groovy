@@ -55,7 +55,10 @@ class OpenSkyNetworkClient {
     }
 //todo use login info if available
     static AllStateVectorsResponse getAllStates() {
-        def rawResponse = new JsonSlurper().parse("${PropertyManager.instance.properties.openSky.url}/states/all".toURL())
+        def is = "${PropertyManager.instance.properties.openSky.url}/states/all".toURL().openStream()
+        def rawResponse = new JsonSlurper().parse(is)
+        is.close()
+
         def response = new AllStateVectorsResponse(time: rawResponse.time)
 
         def positionSources = PositionSource.values()
@@ -95,9 +98,10 @@ class OpenSkyNetworkClient {
 
         //this try{} is a bit ugly, but simple means of dealing with empty results, which end are sent as a 404
         try {
-            def rawResponse = new JsonSlurper().parse(
-                "${PropertyManager.instance.properties.openSky.url}/flights/all?begin=${time - 7200}&end=$time".toURL()
-            )
+            def is = "${PropertyManager.instance.properties.openSky.url}/flights/all?begin=${time - 7200}&end=$time".toURL().openStream()
+            def rawResponse = new JsonSlurper().parse(is)
+            is.close()
+
             rawResponse?.each { flight ->
                 try {
                     def flightObj = new Flight()

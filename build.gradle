@@ -3,7 +3,7 @@ version '1.0-SNAPSHOT'
 
 apply plugin: 'groovy'
 apply plugin: 'application'
-applicationDefaultJvmArgs = ["-Xmx1024m", "-Xmx2048m"]
+applicationDefaultJvmArgs = ["-Xms4g", "-Xmx4g", "-XX:+UseG1GC"]
 
 repositories {
     mavenCentral()
