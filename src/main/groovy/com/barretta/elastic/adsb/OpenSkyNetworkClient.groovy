@@ -53,13 +53,10 @@ class OpenSkyNetworkClient {
     static enum PositionSource {
         ADS_B, ASTERIX, MLAT, OTHER
     }
-//todo use login info if available
-    static AllStateVectorsResponse getAllStates() {
-        def is = "${PropertyManager.instance.properties.openSky.url}/states/all".toURL().openStream()
-        def rawResponse = new JsonSlurper().parse(is)
-        is.close()
 
-        def response = new AllStateVectorsResponse(time: rawResponse.time)
+    static AllStateVectorsResponse getAllStates() {
+        def rawResponse = new JsonSlurper().parse("${PropertyManager.instance.properties.openSky.url}/states/all".toURL().)
+        def returnResponse = new AllStateVectorsResponse(time: rawResponse.time)
 
         def positionSources = PositionSource.values()
         rawResponse.states.each { state ->
@@ -85,23 +82,20 @@ class OpenSkyNetworkClient {
                     positionSource = state.size() == 17 ? positionSources[state[16].intValue()] : null
                     _id = lastContact + icao
                 }
-                response.states << stateVector
+                returnResponse.states << stateVector
             } catch (e) {
                 log.error("ERROR parsing state vector:\n" + state.toString(), e)
             }
         }
-        return response
+        return returnResponse
     }
 
     static AllFlightsResponse getAllFlights(time) {
-        def response = new AllFlightsResponse()
+        def returnResponse = new AllFlightsResponse()
 
         //this try{} is a bit ugly, but simple means of dealing with empty results, which end are sent as a 404
         try {
-            def is = "${PropertyManager.instance.properties.openSky.url}/flights/all?begin=${time - 7200}&end=$time".toURL().openStream()
-            def rawResponse = new JsonSlurper().parse(is)
-            is.close()
-
+            def rawResponse = new JsonSlurper().parse("${PropertyManager.instance.properties.openSky.url}/flights/all?begin=${time - 7200}&end=$time".toURL())
             rawResponse?.each { flight ->
                 try {
                     def flightObj = new Flight()
@@ -118,7 +112,7 @@ class OpenSkyNetworkClient {
                         departureAirportCandidatesCount = flight?.departureAirportCandidatesCount?.intValue()
                         arrivalAirportCandidatesCount = flight?.arrivalAirportCandidatesCount?.intValue()
                     }
-                    response.flights << flightObj
+                    returnResponse .flights << flightObj
                 } catch (e) {
                     log.error("ERROR parsing flight:\n" + flight.toString(), e)
                 }
@@ -126,6 +120,6 @@ class OpenSkyNetworkClient {
         } catch (JsonException e) {
             log.debug("No data for timespan [${time - 7200}] to [$time]", e)
         }
-        return response
+        return returnResponse
     }
 }

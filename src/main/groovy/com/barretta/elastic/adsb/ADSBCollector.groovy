@@ -7,14 +7,11 @@ import groovyx.gpars.GParsExecutorsPool
 import org.elasticsearch.index.query.MatchAllQueryBuilder
 
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 @Slf4j
 class ADSBCollector {
 
     static def aircraft = [:] as ConcurrentHashMap
-    static volatile ESClient esClient = null
 
     //todo add setup option that creates the index templates, rollover, etc., plus the aircraft index from the csv
     static void main(String[] args) {
@@ -34,6 +31,7 @@ class ADSBCollector {
 
     static void loopIt(long interval) {
         log.info("Let's do this! ...every [$interval] seconds\n")
+
         log.info("caching all aircraft data")
         getAllAircraft()
 
@@ -50,12 +48,7 @@ class ADSBCollector {
     static class Collector implements Runnable {
         @Override
         void run() {
-//            log.info("sleeping")
-//            Thread.sleep(10000)
-            log.info("loading all aircraft data")
-            def aircraft = getAllAircraft()
-
-            log.info("fetching all states")
+            log.info("**BEGIN**\nfetching all states")
             def allStates = OpenSkyNetworkClient.getAllStates()
             log.info(" ...found [${allStates.states.size()}]")
 
@@ -101,7 +94,7 @@ class ADSBCollector {
             esClient.config.index = PropertyManager.instance.properties.indices.opensky
             esClient.bulk([(ESClient.BulkOps.INSERT): esRecords])
             esClient.close()
-            log.info(" ...done")
+            log.info("**END**")
         }
     }
 
@@ -124,10 +117,6 @@ class ADSBCollector {
     }
 
     static def getEsClient() {
-//        if (!esClient) {
-            def config = PropertyManager.instance.properties.es as ESClient.Config
-            def esClient2 = new ESClient(config)
-//        }
-        return esClient2
+        return new ESClient(PropertyManager.instance.properties.es as ESClient.Config)
     }
 }
