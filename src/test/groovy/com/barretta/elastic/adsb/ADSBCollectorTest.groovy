@@ -6,9 +6,8 @@ import spock.lang.Specification
 class ADSBCollectorTest extends Specification {
     def "DoIt"() {
         when:
-        def collector = new ADSBCollector()
-        collector.initEsClient()
-        collector.doIt()
+        def collector = new ADSBCollector.Collector()
+        collector.run()
 
         then:
         noExceptionThrown()
@@ -18,7 +17,6 @@ class ADSBCollectorTest extends Specification {
     def "loopIt"() {
         when:
         def collector = new ADSBCollector()
-        collector.initEsClient()
         collector.loopIt(10000l)
 
         then:
@@ -28,5 +26,10 @@ class ADSBCollectorTest extends Specification {
     def "getAllAircraft works"() {
         expect:
         ADSBCollector.getAllAircraft().keySet().size() == 460000
+    }
+
+    def "calls rollover"() {
+        expect:
+        new ADSBCollector.Rollover().run()
     }
 }

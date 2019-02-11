@@ -210,12 +210,6 @@ PUT _template/opensky
 PUT /opensky-000001
 {
   "aliases": {
-    "opensky": {}
-  }
-}
-POST /opensky/_rollover
-{
-  "conditions": {
-    "max_size":  "10gb"
+    "opensky": { "is_write_index": true}
   }
 }

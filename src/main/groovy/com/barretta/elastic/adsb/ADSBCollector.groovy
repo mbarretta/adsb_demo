@@ -4,9 +4,18 @@ import com.elastic.barretta.clients.ESClient
 import groovy.cli.commons.CliBuilder
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsExecutorsPool
+import org.elasticsearch.action.admin.indices.rollover.RolloverAction
+import org.elasticsearch.action.admin.indices.rollover.RolloverRequest
+import org.elasticsearch.client.RequestOptions
+import org.elasticsearch.common.unit.ByteSizeUnit
+import org.elasticsearch.common.unit.ByteSizeValue
 import org.elasticsearch.index.query.MatchAllQueryBuilder
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 @Slf4j
 class ADSBCollector {
@@ -35,6 +44,15 @@ class ADSBCollector {
         log.info("caching all aircraft data")
         getAllAircraft()
 
+        if (PropertyManager.instance.properties.rollover.enabled == true) {
+            ScheduledExecutorService rolloverSchedule = new ScheduledThreadPoolExecutor(1)
+            rolloverSchedule.scheduleAtFixedRate(new Rollover(), 0, 1, TimeUnit.MINUTES)
+        }
+
+        //we're doing this instead of something like Executor.scheduleAtFixRate because we want these tasks to overlap
+        //and the Executor says:
+        // " If any execution of this task takes longer than its period, then subsequent executions may start late,
+        //   but will not concurrently execute."
         GParsExecutorsPool.withPool(Runtime.getRuntime().availableProcessors() - 1) {
             while (true) {
                 it.execute(new Collector())
@@ -48,7 +66,8 @@ class ADSBCollector {
     static class Collector implements Runnable {
         @Override
         void run() {
-            log.info("**BEGIN**\nfetching all states")
+            log.info("**BEGIN**")
+            log.info("fetching all states")
             def allStates = OpenSkyNetworkClient.getAllStates()
             log.info(" ...found [${allStates.states.size()}]")
 
@@ -95,6 +114,21 @@ class ADSBCollector {
             esClient.bulk([(ESClient.BulkOps.INSERT): esRecords])
             esClient.close()
             log.info("**END**")
+        }
+    }
+
+    static class Rollover implements Runnable {
+        @Override
+        void run() {
+            RolloverRequest request = new RolloverRequest(PropertyManager.instance.properties.indices.opensky, null)
+            request.addMaxIndexDocsCondition(PropertyManager.instance.properties.rollover.max_docs)
+            request.addMaxIndexSizeCondition(new ByteSizeValue(PropertyManager.instance.properties.rollover.max_size_gb, ByteSizeUnit.GB))
+            def response = esClient.indices().rollover(request, RequestOptions.DEFAULT)
+            if (response.isRolledOver()) {
+                log.info("Rollover complete: [$response.oldIndex] --> [$response.newIndex]")
+            } else {
+                log.debug("No rollover needed: $response.conditionStatus")
+            }
         }
     }
 
