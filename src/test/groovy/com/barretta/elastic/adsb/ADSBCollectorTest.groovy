@@ -30,6 +30,6 @@ class ADSBCollectorTest extends Specification {
 
     def "calls rollover"() {
         expect:
-        new ADSBCollector.Rollover().run()
+        ADSBCollector.rollover()
     }
 }

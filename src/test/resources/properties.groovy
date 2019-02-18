@@ -15,4 +15,6 @@ rollover {
     enabled = true
     max_docs = 40000000
     max_size_gb = 20
+    delete_older_than = 5
 }
+maxThreads = 2
