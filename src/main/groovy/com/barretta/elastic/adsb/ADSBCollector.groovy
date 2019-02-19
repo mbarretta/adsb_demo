@@ -4,7 +4,7 @@ import com.elastic.barretta.clients.ESClient
 import groovy.cli.commons.CliBuilder
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsExecutorsPool
-import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest
 import org.elasticsearch.action.admin.indices.get.GetIndexRequest
 import org.elasticsearch.action.admin.indices.rollover.RolloverRequest
 import org.elasticsearch.action.delete.DeleteRequest
@@ -155,7 +155,7 @@ class ADSBCollector {
                     def oldIndexIndex = ((newIndexIndex as int) - props.rollover.delete_older_than) as String
                     def oldIndex = "${props.indices.opensky}-${oldIndexIndex.padLeft(6, "0")}"
                     if (esClient.indices().exists(new GetIndexRequest().indices(oldIndex), RequestOptions.DEFAULT)) {
-                        esClient.delete(new DeleteRequest(oldIndex), RequestOptions.DEFAULT)
+                        esClient.indices().delete(new DeleteIndexRequest(oldIndex), RequestOptions.DEFAULT)
                         log.info("deleted old index [$oldIndex]")
                     }
                 }
