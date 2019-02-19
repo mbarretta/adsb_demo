@@ -7,7 +7,6 @@ import groovyx.gpars.GParsExecutorsPool
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest
 import org.elasticsearch.action.admin.indices.get.GetIndexRequest
 import org.elasticsearch.action.admin.indices.rollover.RolloverRequest
-import org.elasticsearch.action.delete.DeleteRequest
 import org.elasticsearch.client.RequestOptions
 import org.elasticsearch.common.unit.ByteSizeUnit
 import org.elasticsearch.common.unit.ByteSizeValue
