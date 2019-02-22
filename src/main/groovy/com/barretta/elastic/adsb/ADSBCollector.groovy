@@ -92,13 +92,15 @@ class ADSBCollector {
                     flight data has "flight.", etc...
                     */
 
-                    def record = [icao: state.icao]
+                    def record = [icao: state.icao, _id: state._id]
 
                     //add state data
                     def stateFields = state.properties.collectEntries { [("state.${it.key}".toString()): it.value] }
                     stateFields.remove("state.icao")
                     stateFields.remove("state.class")
+                    stateFields.remove("state._id")
                     record += stateFields
+
 
                     //join flight data
                     def flight = allFlights.flights.find { it.icao == state.icao }
