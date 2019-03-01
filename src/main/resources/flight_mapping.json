@@ -5,6 +5,9 @@
       "number_of_replicas": 1
     }
   },
+  "aliases": {
+    "opensky": {}
+  },
   "mappings": {
     "_doc": {
       "properties": {
@@ -26,6 +29,9 @@
         },
         "state.location": {
           "type": "geo_point"
+        },
+        "state.shape.location": {
+          "type": "geo_shape"
         },
         "state.onGround": {
           "type": "boolean"

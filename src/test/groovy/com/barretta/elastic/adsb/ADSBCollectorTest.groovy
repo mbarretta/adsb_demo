@@ -29,7 +29,10 @@ class ADSBCollectorTest extends Specification {
     }
 
     def "calls rollover"() {
-        expect:
+        when:
         ADSBCollector.rollover()
+
+        then:
+        noExceptionThrown()
     }
 }

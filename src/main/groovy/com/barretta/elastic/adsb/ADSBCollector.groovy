@@ -99,8 +99,11 @@ class ADSBCollector {
                     stateFields.remove("state.icao")
                     stateFields.remove("state.class")
                     stateFields.remove("state._id")
+                    stateFields["state.shape.location"] = [ //make a geo_shape field along w/ geo_point
+                        type: "point",
+                        coordinates: [stateFields["state.location"].lon, stateFields["state.location"].lat]
+                    ]
                     record += stateFields
-
 
                     //join flight data
                     def flight = allFlights.flights.find { it.icao == state.icao }
