@@ -29,5 +29,5 @@ tasks.withType(GroovyCompile) {
     groovyOptions.optimizationOptions.indy = true
 }
 application {
-    mainClassName = 'com.barretta.elastic.adsb.ADSBCollector'
+    mainClassName = 'com.barretta.elastic.adsb.Manager'
 }
