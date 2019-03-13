@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 
 @Slf4j
-class ADSBCollector {
+class Manager {
 
     static def aircraft = [:] as ConcurrentHashMap
 
@@ -62,80 +62,10 @@ class ADSBCollector {
         def threads = PropertyManager.instance.properties.maxThreads ?: Runtime.getRuntime().availableProcessors() - 1
         GParsExecutorsPool.withPool(threads) { ExecutorService service ->
             while (true) {
-                service.execute(new Collector())
+                service.execute(new CollectorRunnable())
                 log.trace("sleeping [$interval] seconds...")
                 Thread.sleep(interval * 1000)
                 log.trace("...done")
-            }
-        }
-    }
-
-    static class Collector implements Runnable {
-        @Override
-        void run() {
-            def esClient = getEsClient()
-            try {
-                log.trace("**BEGIN**")
-                log.trace("fetching all states")
-                def allStates = OpenSkyNetworkClient.getAllStates()
-                log.trace(" ...found [${allStates.states.size()}]")
-
-                log.trace("fetching all flights")
-                def allFlights = OpenSkyNetworkClient.getAllFlights(allStates.time)
-                log.trace(" ...found [${allFlights.flights.size()}]")
-
-                log.trace("joining everything together")
-                def esRecords = allStates.states.inject([]) { list, state ->
-
-                    /*
-                    we're doing some field name transformation here as well so that state data has a "state." prefix,
-                    flight data has "flight.", etc...
-                    */
-
-                    def record = [icao: state.icao, _id: state._id]
-
-                    //add state data
-                    def stateFields = state.properties.collectEntries { [("state.${it.key}".toString()): it.value] }
-                    stateFields.remove("state.icao")
-                    stateFields.remove("state.class")
-                    stateFields.remove("state._id")
-                    stateFields["state.shape.location"] = [ //make a geo_shape field along w/ geo_point
-                        type: "point",
-                        coordinates: [stateFields["state.location"].lon, stateFields["state.location"].lat]
-                    ]
-                    record += stateFields
-
-                    //join flight data
-                    def flight = allFlights.flights.find { it.icao == state.icao }
-                    if (flight) {
-                        def flightFields = flight.properties.collectEntries {
-                            [("flight.${it.key}".toString()): it.value]
-                        }
-                        flightFields.remove("flight.icao")
-                        flightFields.remove("flight.class")
-                        record += flightFields
-                    }
-
-                    //join aircraft data
-                    if (aircraft.containsKey(state.icao)) {
-                        record += aircraft.get(state.icao)
-                    }
-
-                    list << record
-                }
-                log.trace(" ...done")
-
-                log.trace("bulking into ES")
-
-                esClient.config.index = PropertyManager.instance.properties.indices.opensky
-                esClient.bulk([(ESClient.BulkOps.INSERT): esRecords])
-                esClient.close()
-                log.trace("**END**")
-                log.info("Collected { states: [${allStates.states.size()}], flights: [${allFlights.flights.size()}] }")
-            } catch (e) {
-                log.error("piss", e)
-            } finally {
-                esClient.close()
             }
         }
     }
@@ -181,9 +111,7 @@ class ADSBCollector {
             esClient.scrollQuery(new MatchAllQueryBuilder(), 5000, 2, 1) { it ->
                 def map = it.getSourceAsMap()
                 if (map) {
-                    aircraft.put(map.remove("icao"), map.collectEntries {
-                        [("aircraft.${it.key}".toString()): it.value]
-                    })
+                    this.aircraft.put(map.remove("icao"), [ aircraft: map ] )
                 }
             }
             esClient.close()

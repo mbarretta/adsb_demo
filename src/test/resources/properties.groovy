@@ -10,6 +10,7 @@ openSky {
 indices {
     aircraft = "aircraft"
     opensky = "opensky"
+    flight_tracks = "flight_tracks"
 }
 rollover {
     enabled = true

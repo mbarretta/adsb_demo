@@ -1,12 +1,10 @@
 {
+  "index_patterns": ["opensky*"],
   "settings": {
     "index": {
       "number_of_shards": 1,
       "number_of_replicas": 1
     }
-  },
-  "aliases": {
-    "opensky": {}
   },
   "mappings": {
     "_doc": {
@@ -30,7 +28,7 @@
         "state.location": {
           "type": "geo_point"
         },
-        "state.shape.location": {
+        "state.location_shape": {
           "type": "geo_shape"
         },
         "state.onGround": {

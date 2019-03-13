@@ -16,4 +16,4 @@ appender("STDOUT", ConsoleAppender) {
         pattern = "%date{MM.dd.yyyy HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n"
     }
 }
-root(INFO, ["FILE", "STDOUT"])
+root(TRACE, ["FILE", "STDOUT"])

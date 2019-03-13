@@ -22,7 +22,7 @@ class OpenSkyNetworkClient {
         String originCountry
         int timePosition
         int lastContact
-        Map<String, Float> location = [:]
+        Map<String, Object> location = [:]
         float baroAltitude
         boolean onGround
         float velocity
@@ -34,6 +34,7 @@ class OpenSkyNetworkClient {
         boolean spi
         PositionSource positionSource
         String _id
+        Map<String, Object> location_shape = [:]
     }
 
     static class Flight {
@@ -62,27 +63,35 @@ class OpenSkyNetworkClient {
         rawResponse.states.each { state ->
             try {
                 def stateVector = new StateVector()
-                stateVector.with {
-                    icao = state[0]?.trim()
-                    callsign = state[1]?.trim()
-                    originCountry = state[2]?.trim()
-                    timePosition = state[3]?.intValue() ?: 0
-                    lastContact = state[4]?.intValue() ?: 0
-                    location.lon = state[5] ?: 0f
-                    location.lat = state[6] ?: 0f
-                    baroAltitude = state[7]?.intValue() ?: 0
-                    onGround = state[8]?.booleanValue() ?: false
-                    velocity = state[9]?.floatValue() ?: 0f
-                    trueTrack = state[10]?.floatValue() ?: 0f
-                    verticalRate = state[11]?.floatValue() ?: 0f
-                    sensors = state[12] ? state[12]*.intValue() : null
-                    geoAltitude = state[13]?.floatValue() ?: 0f
-                    squawk = state[14]?.trim()
-                    spi = state[15]?.booleanValue() ?: false
-                    positionSource = state.size() == 17 ? positionSources[state[16].intValue()] : null
-                    _id = lastContact + icao
+
+                //if we have lat/lon, proceed ...data is worthless to us without geo
+                if (state[5] && state[6]) {
+                    stateVector.with {
+                        icao = state[0]?.trim()
+                        callsign = state[1]?.trim()
+                        originCountry = state[2]?.trim()
+                        timePosition = state[3]?.intValue() ?: 0
+                        lastContact = state[4]?.intValue() ?: 0
+                        location.lon = state[5] ?: 0f
+                        location.lat = state[6] ?: 0f
+                        location_shape = [
+                            type       : "point",
+                            coordinates: [state[5], state[6]]
+                        ]
+                        baroAltitude = state[7]?.intValue() ?: 0
+                        onGround = state[8]?.booleanValue() ?: false
+                        velocity = state[9]?.floatValue() ?: 0f
+                        trueTrack = state[10]?.floatValue() ?: 0f
+                        verticalRate = state[11]?.floatValue() ?: 0f
+                        sensors = state[12] ? state[12]*.intValue() : null
+                        geoAltitude = state[13]?.floatValue() ?: 0f
+                        squawk = state[14]?.trim()
+                        spi = state[15]?.booleanValue() ?: false
+                        positionSource = state.size() == 17 ? positionSources[state[16].intValue()] : null
+                        _id = lastContact + icao
+                    }
+                    returnResponse.states << stateVector
                 }
-                returnResponse.states << stateVector
             } catch (e) {
                 log.error("ERROR parsing state vector:\n" + state.toString(), e)
             }
@@ -95,6 +104,7 @@ class OpenSkyNetworkClient {
 
         //this try{} is a bit ugly, but simple means of dealing with empty results, which end are sent as a 404
         try {
+            //get all flights within the last 2 hours per API rules
             def rawResponse = new JsonSlurper().parse("${PropertyManager.instance.properties.openSky.url}/flights/all?begin=${time - 7200}&end=$time".toURL())
             rawResponse?.each { flight ->
                 try {

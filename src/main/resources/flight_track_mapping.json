@@ -1,0 +1,44 @@
+
+{
+  "index_patterns": ["flight_tracks*"],
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1
+    }
+  },
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "icao": {
+          "type": "keyword"
+        },
+        "landed": {
+          "type": "boolean"
+        },
+        "departureAirport": {
+          "type": "keyword"
+        },
+        "arrivalAirport": {
+          "type": "keyword"
+        },
+        "firstSeen": {
+          "type": "long"
+        },
+        "lastSeen": {
+          "type": "long"
+        },
+        "flightTimeMin": {
+          "type": "integer"
+        },
+        "track": {
+          "type": "geo_shape"
+        },
+        "lastUpdate": {
+          "type": "date",
+          "format": "epoch_millis"
+        }
+      }
+    }
+  }
+}

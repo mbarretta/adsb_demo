@@ -29,6 +29,9 @@ PUT _template/opensky
         "state.location": {
           "type": "geo_point"
         },
+        "state.location_shape": {
+          "type": "geo_shape"
+        }
         "state.onGround": {
           "type": "boolean"
         },
