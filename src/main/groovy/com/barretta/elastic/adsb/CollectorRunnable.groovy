@@ -34,26 +34,20 @@ class CollectorRunnable implements Runnable {
 
         GParsPool.withPool {
             //gather _ids for any existing tracks for this batch of records
-            def msearchRequest = new MultiSearchRequest()
-            records.each {
-                def query = new BoolQueryBuilder()
-                    .filter(QueryBuilders.termQuery("icao", it.icao))
-                    .filter(QueryBuilders.termQuery("landed", false))
+            def query = new BoolQueryBuilder()
+                .filter(QueryBuilders.termsQuery("icao", records.collectParallel { it.icao }))
+                .filter(QueryBuilders.termQuery("landed", false))
 
-                msearchRequest.add(
-                    new SearchRequest(PropertyManager.instance.properties.indices.flight_tracks as String).source(
-                        new SearchSourceBuilder().query(query)
-                    )
-                )
-            }
-            def trackIds = client.msearch(msearchRequest, RequestOptions.DEFAULT)
-                .getResponses()
-                .findAllParallel { it.response.hits.totalHits > 0 }
+            def searchRequest = new SearchRequest(PropertyManager.instance.properties.indices.flight_tracks as String)
+                .source(new SearchSourceBuilder().query(query))
+
+            def trackIds = client.search(searchRequest, RequestOptions.DEFAULT)
+                .hits
                 .collectEntries {
-                    def source = it.response.hits.hits[0].sourceAsMap
-                    source["_id"] = it.response.hits.hits[0].id
+                    def source = it.sourceAsMap
+                    source["_id"] = it.id
                     return [(source.icao): source]
-            }
+                }
 
             //build up our new tracks
             records.eachParallel { record ->
@@ -104,7 +98,7 @@ class CollectorRunnable implements Runnable {
                 }
 
                 //little hacky cleaning
-                coordinates.removeAll{ it[0] == 0.0 || it[1] == 0.0 }
+                coordinates.removeAll { it[0] == 0.0 || it[1] == 0.0 }
 
                 if (coordinates.size() > 0 && !skip) {
                     track << [track: [type: "LineString", coordinates: coordinates]]
