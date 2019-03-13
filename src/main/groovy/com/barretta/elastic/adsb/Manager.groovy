@@ -47,7 +47,8 @@ class Manager {
             def rolloverTask = new TimerTask() {
                 @Override
                 void run() {
-                    rollover()
+                    rollover(PropertyManager.instance.properties.indices.opensky)
+                    rollover(PropertyManager.instance.properties.indices.flight_tracks)
                 }
             }
             def rolloverTimer = new Timer()
@@ -70,10 +71,10 @@ class Manager {
         }
     }
 
-    static def rollover() {
+    static def rollover(index) {
         def props = PropertyManager.instance.properties
 
-        RolloverRequest request = new RolloverRequest(props.indices.opensky, null)
+        RolloverRequest request = new RolloverRequest(index, null)
         request.addMaxIndexDocsCondition(props.rollover.max_docs)
         request.addMaxIndexSizeCondition(new ByteSizeValue(props.rollover.max_size_gb, ByteSizeUnit.GB))
 
@@ -87,7 +88,7 @@ class Manager {
                 if (props.rollover.delete_older_than) {
                     def newIndexIndex = (response.newIndex =~ /.*-(\d+)/)[0][1]
                     def oldIndexIndex = ((newIndexIndex as int) - props.rollover.delete_older_than) as String
-                    def oldIndex = "${props.indices.opensky}-${oldIndexIndex.padLeft(6, "0")}"
+                    def oldIndex = "${index}-${oldIndexIndex.padLeft(6, "0")}"
                     if (esClient.indices().exists(new GetIndexRequest().indices(oldIndex), RequestOptions.DEFAULT)) {
                         esClient.indices().delete(new DeleteIndexRequest(oldIndex), RequestOptions.DEFAULT)
                         log.info("deleted old index [$oldIndex]")
