@@ -9,6 +9,7 @@ import org.elasticsearch.index.query.BoolQueryBuilder
 import org.elasticsearch.index.query.QueryBuilders
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 @Slf4j
@@ -148,9 +149,9 @@ class CollectorRunnable implements Runnable {
         def query = new BoolQueryBuilder()
             .filter(QueryBuilders.termsQuery("icao", records.collectParallel { it.icao }))
             .filter(QueryBuilders.termQuery("landed", false))
-        def results = [:]
+        def results = [:] as ConcurrentHashMap
         client.config.index = PropertyManager.instance.properties.indices.flight_tracks
-        client.scrollQuery(query, 1000) {
+        client.scrollQuery(query, 10000, 4, 1) {
                 def source = it.sourceAsMap
                 source["_id"] = it.id
                 results << [(source.icao): source]
