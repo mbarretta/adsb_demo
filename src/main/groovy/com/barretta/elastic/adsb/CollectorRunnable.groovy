@@ -3,7 +3,6 @@ package com.barretta.elastic.adsb
 import com.elastic.barretta.clients.ESClient
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
-import org.elasticsearch.action.search.MultiSearchRequest
 import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.client.RequestOptions
 import org.elasticsearch.index.query.BoolQueryBuilder
@@ -33,21 +32,11 @@ class CollectorRunnable implements Runnable {
         def tracks = [] as ConcurrentLinkedQueue
 
         GParsPool.withPool {
+            client.config.index = PropertyManager.instance.properties.indices.flight_tracks
+
             //gather _ids for any existing tracks for this batch of records
-            def query = new BoolQueryBuilder()
-                .filter(QueryBuilders.termsQuery("icao", records.collectParallel { it.icao }))
-                .filter(QueryBuilders.termQuery("landed", false))
-
-            def searchRequest = new SearchRequest(PropertyManager.instance.properties.indices.flight_tracks as String)
-                .source(new SearchSourceBuilder().query(query))
-
-            def trackIds = client.search(searchRequest, RequestOptions.DEFAULT)
-                .hits
-                .collectEntries {
-                    def source = it.sourceAsMap
-                    source["_id"] = it.id
-                    return [(source.icao): source]
-                }
+            def trackIds = getFlyingTracks(records, client)
+//            def landedIds = getLandedFlights(records, client)
 
             //build up our new tracks
             records.eachParallel { record ->
@@ -153,5 +142,47 @@ class CollectorRunnable implements Runnable {
         }
         log.info("Collected { states: [${allStates.states.size()}], flights: [${allFlights.flights.size()}] }")
         return esRecords
+    }
+
+    static def getFlyingTracks(records, client) {
+        def query = new BoolQueryBuilder()
+            .filter(QueryBuilders.termsQuery("icao", records.collectParallel { it.icao }))
+            .filter(QueryBuilders.termQuery("landed", false))
+        def results = [:]
+        client.config.index = PropertyManager.instance.properties.indices.flight_tracks
+        client.scrollQuery(query, 1000) {
+                def source = it.sourceAsMap
+                source["_id"] = it.id
+                results << [(source.icao): source]
+        }
+
+//        def searchRequest = new SearchRequest(PropertyManager.instance.properties.indices.flight_tracks as String)
+//            .source(new SearchSourceBuilder().query(query))
+//
+//        return client.search(searchRequest, RequestOptions.DEFAULT)
+//            .hits
+//            .collectEntries {
+//            def source = it.sourceAsMap
+//            source["_id"] = it.id
+//            return [(source.icao): source]
+//        }
+        return results
+    }
+
+    static def getLandedFlights(records, client) {
+        def query = new BoolQueryBuilder()
+            .filter(QueryBuilders.termsQuery("icao", records.collectParallel { it.icao }))
+            .filter(QueryBuilders.termQuery("landed", true))
+
+        def searchRequest = new SearchRequest(PropertyManager.instance.properties.indices.flight_tracks as String)
+            .source(new SearchSourceBuilder().query(query))
+
+        return client.search(searchRequest, RequestOptions.DEFAULT)
+            .hits
+            .collectEntries {
+            def source = it.sourceAsMap
+            source["_id"] = it.id
+            return [(source.icao): source]
+        }
     }
 }
