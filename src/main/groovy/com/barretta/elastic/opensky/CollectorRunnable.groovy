@@ -1,4 +1,4 @@
-package com.barretta.elastic.adsb
+package com.barretta.elastic.opensky
 
 import com.elastic.barretta.clients.ESClient
 import groovy.util.logging.Slf4j

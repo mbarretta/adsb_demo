@@ -13,9 +13,11 @@ repositories {
 dependencies {
     compile(
         'org.codehaus.groovy:groovy-all:2.5.5',
+        'org.codehaus.gpars:gpars:1.2.1',
         'ch.qos.logback:logback-classic:1.2.3',
         'org.apache.logging.log4j:log4j-to-slf4j:2.11.2',
-        'com.github.mbarretta:es-client:448df66'
+        'com.github.mbarretta:es-client:7e6c320',
+        'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.0.0'
     )
     testCompile('org.spockframework:spock-core:1.3-RC1-groovy-2.5') {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
@@ -29,5 +31,5 @@ tasks.withType(GroovyCompile) {
     groovyOptions.optimizationOptions.indy = true
 }
 application {
-    mainClassName = 'com.barretta.elastic.adsb.Manager'
+    mainClassName = 'com.barretta.elastic.opensky.Manager'
 }

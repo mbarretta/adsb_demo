@@ -1,4 +1,4 @@
-package com.barretta.elastic.adsb
+package com.barretta.elastic.opensky
 
 import groovy.json.JsonException
 import groovy.json.JsonSlurper

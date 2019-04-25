@@ -1,4 +1,4 @@
-package com.barretta.elastic.adsb
+package com.barretta.elastic.opensky
 
 @Singleton(strict = false)
 class PropertyManager {

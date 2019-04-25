@@ -2,14 +2,14 @@ es {
     url = "http://localhost:9200"
     user = ""
     pass = ""
-    index = "opensky"
+    index = "flights"
 }
 openSky {
     url = "https://opensky-network.org/api"
 }
 indices {
     aircraft = "aircraft"
-    opensky = "opensky"
+    opensky = "flights"
     flight_tracks = "flight_tracks"
 }
 rollover {

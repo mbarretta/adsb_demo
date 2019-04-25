@@ -1,6 +1,6 @@
-package com.barretta.elastic.adsb
+package com.barretta.elastic.opensky
 
-import spock.lang.Ignore
+
 import spock.lang.Specification
 
 class ManagerTest extends Specification {
