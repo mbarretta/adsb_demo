@@ -115,14 +115,22 @@ class OpenSkyNetworkClient {
                         estDepartureAirport = flight?.estDepartureAirport?.trim()
                         lastSeen = flight?.lastSeen?.intValue()
                         estArrivalAirport = flight?.estArrivalAirport?.trim()
-                        estDepartureAirportHorizDistance = flight?.estDepartureAirportHorizDistance?.intValue()
-                        estDepartureAirportVertDistance = flight?.estDepartureAirportVertDistance?.intValue()
-                        estArrivalAirportHorizDistance = flight?.estArrivalAirportHorizDistance?.intValue()
-                        estArrivalAirportVertDistance = flight?.estArrivalAirportVertDistance?.intValue()
+                        if (flight.containsKey("estDepartureAirportHorizDistance") && flight.estDepartureAirportHorizDistance) {
+                            estDepartureAirportHorizDistance = flight.estDepartureAirportHorizDistance.intValue()
+                        }
+                        if (flight.containsKey("estDepartureAirportVertDistance") && flight.estDepartureAirportVertDistance) {
+                            estDepartureAirportVertDistance = flight.estDepartureAirportVertDistance.intValue()
+                        }
+                        if (flight.containsKey("estArrivalAirportHorizDistance") && flight.estArrivalAirportHorizDistance) {
+                            estArrivalAirportHorizDistance = flight.estArrivalAirportHorizDistance.intValue()
+                        }
+                        if (flight.containsKey("estArrivalAirportVertDistance") && flight.estArrivalAirportVertDistance) {
+                            estArrivalAirportVertDistance = flight.estArrivalAirportVertDistance.intValue()
+                        }
                         departureAirportCandidatesCount = flight?.departureAirportCandidatesCount?.intValue()
                         arrivalAirportCandidatesCount = flight?.arrivalAirportCandidatesCount?.intValue()
                     }
-                    returnResponse .flights << flightObj
+                    returnResponse.flights << flightObj
                 } catch (e) {
                     log.error("ERROR parsing flight:\n" + flight.toString(), e)
                 }

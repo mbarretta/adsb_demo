@@ -5,9 +5,9 @@ import groovy.cli.commons.CliBuilder
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsExecutorsPool
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest
-import org.elasticsearch.action.admin.indices.get.GetIndexRequest
-import org.elasticsearch.action.admin.indices.rollover.RolloverRequest
 import org.elasticsearch.client.RequestOptions
+import org.elasticsearch.client.indices.GetIndexRequest
+import org.elasticsearch.client.indices.rollover.RolloverRequest
 import org.elasticsearch.common.unit.ByteSizeUnit
 import org.elasticsearch.common.unit.ByteSizeValue
 import org.elasticsearch.index.query.MatchAllQueryBuilder
