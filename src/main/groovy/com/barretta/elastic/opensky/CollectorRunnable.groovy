@@ -1,6 +1,7 @@
 package com.barretta.elastic.opensky
 
 import com.elastic.barretta.clients.ESClient
+import groovy.transform.Synchronized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
 import org.elasticsearch.action.search.SearchRequest
@@ -29,6 +30,7 @@ class CollectorRunnable implements Runnable {
         }
     }
 
+    @Synchronized
     static List updateFlightTracks(records, ESClient client) {
         def tracks = [] as ConcurrentLinkedQueue
 
@@ -53,6 +55,8 @@ class CollectorRunnable implements Runnable {
                     ]
                 }
                 def coordinates = []
+
+                //add points to existing track, if we have one
                 if (trackIds.containsKey(record.icao)) {
                     def hit = trackIds.get(record.icao)
                     coordinates = hit.track.coordinates
@@ -71,7 +75,7 @@ class CollectorRunnable implements Runnable {
                 }
 
                 //if we don't have an existing track record, we'll actually need to add this one point twice since you
-                //since you can't have a one-point line
+                //can't have a one-point line
                 else {
                     //if we don't have an existing non-landed track, but this is a landed flight, that means it hasn't
                     //taken off again, so we don't need to write the record
@@ -149,24 +153,14 @@ class CollectorRunnable implements Runnable {
         def query = new BoolQueryBuilder()
             .filter(QueryBuilders.termsQuery("icao", records.collectParallel { it.icao }))
             .filter(QueryBuilders.termQuery("landed", false))
-        def results = [:] as ConcurrentHashMap
+        def results = [:]
         client.config.index = PropertyManager.instance.properties.indices.flight_tracks
         client.scrollQuery(query, 10000, 4, 1) {
-                def source = it.sourceAsMap
-                source["_id"] = it.id
-                results << [(source.icao): source]
+            def source = it.sourceAsMap
+            source["_id"] = it.id
+            results << [(source.icao): source]
         }
 
-//        def searchRequest = new SearchRequest(PropertyManager.instance.properties.indices.flight_tracks as String)
-//            .source(new SearchSourceBuilder().query(query))
-//
-//        return client.search(searchRequest, RequestOptions.DEFAULT)
-//            .hits
-//            .collectEntries {
-//            def source = it.sourceAsMap
-//            source["_id"] = it.id
-//            return [(source.icao): source]
-//        }
         return results
     }
 
@@ -181,9 +175,9 @@ class CollectorRunnable implements Runnable {
         return client.search(searchRequest, RequestOptions.DEFAULT)
             .hits
             .collectEntries {
-            def source = it.sourceAsMap
-            source["_id"] = it.id
-            return [(source.icao): source]
-        }
+                def source = it.sourceAsMap
+                source["_id"] = it.id
+                return [(source.icao): source]
+            }
     }
 }
