@@ -1,11 +1,13 @@
 {
   "index_patterns": [
-    "flight_tracks*"
+    "flight_tracks-*"
   ],
   "settings": {
     "index": {
       "number_of_shards": 1,
-      "number_of_replicas": 1
+      "number_of_replicas": 1,
+      "lifecycle.name": "flight_tracks",
+      "lifecycle.rollover_alias": "flight_tracks"
     }
   },
   "mappings": {

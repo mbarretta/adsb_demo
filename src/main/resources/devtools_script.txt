@@ -1,218 +1,272 @@
-PUT _template/opensky
+PUT _template/flights
 {
-  "index_patterns": ["opensky*"],
+  "index_patterns": [
+    "flights-*"
+  ],
   "settings": {
     "index": {
       "number_of_shards": 1,
-      "number_of_replicas": 1
+      "number_of_replicas": 1,
+      "lifecycle.name": "flights",
+      "lifecycle.rollover_alias": "flights"
     }
   },
   "mappings": {
-    "_doc": {
-      "properties": {
-        "state.baroAltitude": {
-          "type": "float"
-        },
-        "state.callsign": {
-          "type": "keyword"
-        },
-        "state.geoAltitude": {
-          "type": "float"
-        },
-        "icao": {
-          "type": "keyword"
-        },
-        "state.lastContact": {
-          "type": "date",
-          "format": "epoch_second"
-        },
-        "state.location": {
-          "type": "geo_point"
-        },
-        "state.location_shape": {
-          "type": "geo_shape"
+    "properties": {
+      "state.baroAltitude": {
+        "type": "float"
+      },
+      "state.callsign": {
+        "type": "keyword"
+      },
+      "state.geoAltitude": {
+        "type": "float"
+      },
+      "icao": {
+        "type": "keyword"
+      },
+      "state.lastContact": {
+        "type": "date",
+        "format": "epoch_second"
+      },
+      "state.location": {
+        "type": "geo_point"
+      },
+      "state.location_shape": {
+        "type": "geo_shape"
+      },
+      "state.onGround": {
+        "type": "boolean"
+      },
+      "state.originCountry": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
         }
-        "state.onGround": {
-          "type": "boolean"
-        },
-        "state.originCountry": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
+      },
+      "state.positionSource": {
+        "type": "keyword"
+      },
+      "state.spi": {
+        "type": "boolean"
+      },
+      "state.squawk": {
+        "type": "keyword"
+      },
+      "state.timePosition": {
+        "type": "date",
+        "format": "epoch_second"
+      },
+      "state.trueTrack": {
+        "type": "float"
+      },
+      "state.velocity": {
+        "type": "float"
+      },
+      "state.verticalRate": {
+        "type": "float"
+      },
+      "flight.arrivalAirportCandidatesCount": {
+        "type": "integer"
+      },
+      "flight.departureAirportCandidatesCount": {
+        "type": "integer"
+      },
+      "flight.estArrivalAirport": {
+        "type": "keyword"
+      },
+      "flight.estArrivalAirportHorizDistance": {
+        "type": "integer"
+      },
+      "flight.estArrivalAirportVertDistance": {
+        "type": "integer"
+      },
+      "flight.estDepartureAirport": {
+        "type": "keyword"
+      },
+      "flight.estDepartureAirportHorizDistance": {
+        "type": "integer"
+      },
+      "flight.estDepartureAirportVertDistance": {
+        "type": "integer"
+      },
+      "flight.firstSeen": {
+        "type": "date",
+        "format": "epoch_second"
+      },
+      "flight.lastSeen": {
+        "type": "date",
+        "format": "epoch_second"
+      },
+      "aircraft.acars": {
+        "type": "boolean"
+      },
+      "aircraft.adsb": {
+        "type": "boolean"
+      },
+      "aircraft.built": {
+        "type": "keyword"
+      },
+      "aircraft.categoryDescription": {
+        "type": "keyword"
+      },
+      "aircraft.engines": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
           }
-        },
-        "state.positionSource": {
-          "type": "keyword"
-        },
-        "state.spi": {
-          "type": "boolean"
-        },
-        "state.squawk": {
-          "type": "keyword"
-        },
-        "state.timePosition": {
-          "type": "date",
-          "format": "epoch_second"
-        },
-        "state.trueTrack": {
-          "type": "float"
-        },
-        "state.velocity": {
-          "type": "float"
-        },
-        "state.verticalRate": {
-          "type": "float"
-        },
-        "flight.arrivalAirportCandidatesCount": {
-          "type": "integer"
-        },
-        "flight.departureAirportCandidatesCount": {
-          "type": "integer"
-        },
-        "flight.estArrivalAirport": {
-          "type": "keyword"
-        },
-        "flight.estArrivalAirportHorizDistance": {
-          "type": "integer"
-        },
-        "flight.estArrivalAirportVertDistance": {
-          "type": "integer"
-        },
-        "flight.estDepartureAirport": {
-          "type": "keyword"
-        },
-        "flight.estDepartureAirportHorizDistance": {
-          "type": "integer"
-        },
-        "flight.estDepartureAirportVertDistance": {
-          "type": "integer"
-        },
-        "flight.firstSeen": {
-          "type": "date",
-          "format": "epoch_second"
-        },
-        "flight.lastSeen": {
-          "type": "date",
-          "format": "epoch_second"
-        },
-        "aircraft.acars": {
-          "type": "boolean"
-        },
-        "aircraft.adsb": {
-          "type": "boolean"
-        },
-        "aircraft.built": {
-          "type": "keyword"
-        },
-        "aircraft.categoryDescription": {
-          "type": "keyword"
-        },
-        "aircraft.engines": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
-        },
-        "aircraft.firstFlightDate": {
-          "type": "keyword"
-        },
-        "aircraft.icaoAircraftType": {
-          "type": "keyword"
-        },
-        "aircraft.lineNumber": {
-          "type": "keyword"
-        },
-        "aircraft.manufacturerIcao": {
-          "type": "keyword"
-        },
-        "aircraft.manufacturerName": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
-        },
-        "aircraft.model": {
-          "type": "keyword"
-        },
-        "aircraft.modes": {
-          "type": "boolean"
-        },
-        "aircraft.notes": {
-          "type": "text"
-        },
-        "aircraft.operator": {
-          "type": "keyword"
-        },
-        "aircraft.operatorCallsign": {
-          "type": "keyword"
-        },
-        "aircraft.operatorIata": {
-          "type": "keyword"
-        },
-        "aircraft.operatorIcao": {
-          "type": "keyword"
-        },
-        "aircraft.owner": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
-        },
-        "aircraft.regUntil": {
-          "type": "keyword"
-        },
-        "aircraft.registered": {
-          "type": "keyword"
-        },
-        "aircraft.registration": {
-          "type": "keyword"
-        },
-        "aircraft.seatConfiguration": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
-        },
-        "aircraft.serialNumber": {
-          "type": "keyword"
-        },
-        "aircraft.status": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
-        },
-        "aircraft.testReg": {
-          "type": "keyword"
-        },
-        "aircraft.typeCode": {
-          "type": "keyword"
         }
+      },
+      "aircraft.firstFlightDate": {
+        "type": "keyword"
+      },
+      "aircraft.icaoAircraftType": {
+        "type": "keyword"
+      },
+      "aircraft.lineNumber": {
+        "type": "keyword"
+      },
+      "aircraft.manufacturerIcao": {
+        "type": "keyword"
+      },
+      "aircraft.manufacturerName": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "aircraft.model": {
+        "type": "keyword"
+      },
+      "aircraft.modes": {
+        "type": "boolean"
+      },
+      "aircraft.notes": {
+        "type": "text"
+      },
+      "aircraft.operator": {
+        "type": "keyword"
+      },
+      "aircraft.operatorCallsign": {
+        "type": "keyword"
+      },
+      "aircraft.operatorIata": {
+        "type": "keyword"
+      },
+      "aircraft.operatorIcao": {
+        "type": "keyword"
+      },
+      "aircraft.owner": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "aircraft.regUntil": {
+        "type": "keyword"
+      },
+      "aircraft.registered": {
+        "type": "keyword"
+      },
+      "aircraft.registration": {
+        "type": "keyword"
+      },
+      "aircraft.seatConfiguration": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "aircraft.serialNumber": {
+        "type": "keyword"
+      },
+      "aircraft.status": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "aircraft.testReg": {
+        "type": "keyword"
+      },
+      "aircraft.typeCode": {
+        "type": "keyword"
       }
     }
   }
 }
-PUT /opensky-000001
+PUT /flights-000001
 {
   "aliases": {
-    "opensky": { "is_write_index": true}
+    "flights": { "is_write_index": true}
+  }
+}
+PUT _template/flight_tracks
+{
+  "index_patterns": [
+    "flight_tracks-*"
+  ],
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "lifecycle.name": "flight_tracks",
+      "lifecycle.rollover_alias": "flight_tracks"
+    }
+  },
+  "mappings": {
+    "properties": {
+      "icao": {
+        "type": "keyword"
+      },
+      "landed": {
+        "type": "boolean"
+      },
+      "departureAirport": {
+        "type": "keyword"
+      },
+      "arrivalAirport": {
+        "type": "keyword"
+      },
+      "firstSeen": {
+        "type": "long"
+      },
+      "lastSeen": {
+        "type": "long"
+      },
+      "flightTimeMin": {
+        "type": "integer"
+      },
+      "track": {
+        "type": "geo_shape"
+      },
+      "lastUpdate": {
+        "type": "date",
+        "format": "epoch_millis"
+      }
+    }
+  }
+}
+PUT /flight_tracks-000001
+{
+  "aliases": {
+    "flight_tracks": { "is_write_index": true}
   }
 }
