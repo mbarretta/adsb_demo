@@ -10,7 +10,6 @@ import org.elasticsearch.index.query.BoolQueryBuilder
 import org.elasticsearch.index.query.QueryBuilders
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 @Slf4j
@@ -38,7 +37,7 @@ class CollectorRunnable implements Runnable {
             client.config.index = PropertyManager.instance.properties.indices.flight_tracks
 
             //gather _ids for any existing tracks for this batch of records
-            def trackIds = getFlyingTracks(records, client)
+            def trackIds = getFlightTracks(records, client)
 //            def landedIds = getLandedFlights(records, client)
 
             //build up our new tracks
@@ -72,6 +71,13 @@ class CollectorRunnable implements Runnable {
                             flightTimeMin   : (hit.lastSeen - hit.firstSeen) / 60 //convert to minutes
                         ]
                     }
+
+                    //we only want to add this point if it's actually different from the previous one
+                    if (record.state.location.lon != coordinates.last()[0] && record.state.location.lat != coordinates.last()[1]) {
+                        coordinates << [record.state.location.lon, record.state.location.lat]
+                    } else {
+                        skip = true
+                    }
                 }
 
                 //if we don't have an existing track record, we'll actually need to add this one point twice since you
@@ -83,11 +89,6 @@ class CollectorRunnable implements Runnable {
                         skip = true
                     }
                     coordinates << [record.state.location.lon, record.state.location.lat]
-                    coordinates << [record.state.location.lon, record.state.location.lat]
-                }
-
-                //we only want to add this point if it's actually different from the previous one
-                if (record.state.location.lon != coordinates.last()[0] && record.state.location.lat != coordinates.last()[1]) {
                     coordinates << [record.state.location.lon, record.state.location.lat]
                 }
 
@@ -149,7 +150,7 @@ class CollectorRunnable implements Runnable {
         return esRecords
     }
 
-    static def getFlyingTracks(records, client) {
+    static def getFlightTracks(records, client) {
         def query = new BoolQueryBuilder()
             .filter(QueryBuilders.termsQuery("icao", records.collectParallel { it.icao }))
             .filter(QueryBuilders.termQuery("landed", false))
