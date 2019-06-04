@@ -43,7 +43,24 @@ class CollectorRunnable implements Runnable {
             //build up our new tracks
             records.eachParallel { record ->
                 def skip = false
-                def track = [icao: record.icao, landed: record.state.onGround, lastUpdate: new Date().getTime()]
+                def track = [
+                    icao: record.icao,
+                    landed: record.state.onGround,
+                    aircraft: [
+                        manufacturerName: record.aircraft.manufacturerName,
+                        model: record.aircraft.model,
+                        operatorCallsign: record.aircraft.operatorCallsign,
+                        owner: record.aircraft.owner,
+                        registration: record.aircraft.registration
+                    ],
+                    state: [
+                        callsign: record.state.callsign,
+                        squawk: record.state.squawk,
+                        originCountry: record.state.originCountry,
+                        onGround: record.state.onGround
+                    ],
+                    lastUpdate: new Date().getTime()
+                ]
                 if (record.flight) {
                     track << [
                         departureAirport: record.flight.estDepartureAirport,
