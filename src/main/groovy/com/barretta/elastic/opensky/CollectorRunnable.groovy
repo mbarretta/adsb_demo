@@ -59,7 +59,7 @@ class CollectorRunnable implements Runnable {
                         originCountry: record.state.originCountry,
                         onGround: record.state.onGround
                     ],
-                    lastUpdate: new Date().getTime()
+                    lastUpdate: record.state.timePosition
                 ]
                 if (record.flight) {
                     track << [
