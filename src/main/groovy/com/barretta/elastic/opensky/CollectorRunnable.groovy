@@ -47,11 +47,11 @@ class CollectorRunnable implements Runnable {
                     icao: record.icao,
                     landed: record.state.onGround,
                     aircraft: [
-                        manufacturerName: record.aircraft.manufacturerName,
-                        model: record.aircraft.model,
-                        operatorCallsign: record.aircraft.operatorCallsign,
-                        owner: record.aircraft.owner,
-                        registration: record.aircraft.registration
+                        manufacturerName: record?.aircraft?.manufacturerName,
+                        model: record?.aircraft?.model,
+                        operatorCallsign: record?.aircraft?.operatorCallsign,
+                        owner: record?.aircraft?.owner,
+                        registration: record?.aircraft?.registration
                     ],
                     state: [
                         callsign: record.state.callsign,
