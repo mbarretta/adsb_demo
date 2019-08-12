@@ -232,38 +232,74 @@ PUT _template/flight_tracks
     }
   },
   "mappings": {
-    "properties": {
-      "icao": {
-        "type": "keyword"
-      },
-      "landed": {
-        "type": "boolean"
-      },
-      "departureAirport": {
-        "type": "keyword"
-      },
-      "arrivalAirport": {
-        "type": "keyword"
-      },
-      "firstSeen": {
-        "type": "long"
-      },
-      "lastSeen": {
-        "type": "long"
-      },
-      "flightTimeMin": {
-        "type": "integer"
-      },
-      "track": {
-        "type": "geo_shape"
-      },
-      "lastUpdate": {
-        "type": "date",
-        "format": "epoch_millis"
-      }
-    }
-  }
+     "properties": {
+       "icao": {
+         "type": "keyword"
+       },
+       "landed": {
+         "type": "boolean"
+       },
+       "departureAirport": {
+         "type": "keyword"
+       },
+       "arrivalAirport": {
+         "type": "keyword"
+       },
+       "firstSeen": {
+         "type": "long"
+       },
+       "lastSeen": {
+         "type": "long"
+       },
+       "flightTimeMin": {
+         "type": "integer"
+       },
+       "track": {
+         "type": "geo_shape"
+       },
+       "lastUpdate": {
+         "type": "date",
+         "format": "epoch_second"
+       },
+       "aircraft": {
+         "properties": {
+           "manufacturerName": {
+             "type": "keyword"
+           },
+           "model": {
+             "type": "keyword"
+           },
+           "operatorCallsign": {
+             "type": "keyword"
+           },
+           "owner": {
+             "type": "keyword"
+           },
+           "registration": {
+             "type": "keyword"
+           }
+         }
+       },
+       "state": {
+         "properties": {
+           "callsign": {
+             "type": "keyword"
+           },
+           "onGround": {
+             "type": "boolean"
+           },
+           "originCountry": {
+             "type": "keyword"
+           },
+           "squawk": {
+             "type": "keyword"
+           }
+         }
+       }
+     }
+   }
 }
+
 PUT /flight_tracks-000001
 {
   "aliases": {

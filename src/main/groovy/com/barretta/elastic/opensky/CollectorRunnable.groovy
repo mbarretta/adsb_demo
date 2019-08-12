@@ -173,7 +173,8 @@ class CollectorRunnable implements Runnable {
             .filter(QueryBuilders.termQuery("landed", false))
         def results = [:]
         client.config.index = PropertyManager.instance.properties.indices.flight_tracks
-        client.scrollQuery(query, 10000, 4, 1) {
+        log.debug("getting flight tracks:\n"+query.toString())
+        client.scrollQuery(query, 5000, 4, 1) {
             def source = it.sourceAsMap
             source["_id"] = it.id
             results << [(source.icao): source]
