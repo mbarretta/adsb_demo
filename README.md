@@ -1,4 +1,4 @@
-#ADS-B Demo
+# ADS-B Demo
 
 This code will collect ADS-B data from [Opensky Network](https://opensky-network.org/), do some transforms and joins, and load everything into Elasticsearch.
 
