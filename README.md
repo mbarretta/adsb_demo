@@ -20,11 +20,14 @@ Oh, and before you run this, you'll need to setup the indices in Elasticsearch. 
 - Create an index template for the flight and flight track data
 - Create the initial index for both the flight and flight track data
 
+You'll also need to load in the aircraft database that is joined with the "state" data from Opensky. The easiest way to do that is to use the file upload tool hidden under the [Data Visualizer](https://www.elastic.co/guide/en/kibana/current/xpack-ml.html#xpack-ml) tab of the Machine Learning UI and specify the mapping found in `src/main/resources/aircraft_mapping.json` 
+
 So, overall, you want to:
 1. Get an ES cluster w/ Kibana
 2. Run the dev tools script
-3. Build this thing
-4. Run this thing
+3. Load in the aircraft data 
+4. Build this thing
+5. Run this thing
 
 ...there could be more, but that looks right from here!
 
