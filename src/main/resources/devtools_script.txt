@@ -1,3 +1,62 @@
+PUT _ilm/policy/flights
+{
+    "policy": {
+        "phases": {
+            "hot": {
+                "min_age": "0ms",
+                "actions": {
+                    "rollover": {
+                        "max_age": "1d",
+                        "max_size": "10gb"
+                    },
+                    "set_priority": {
+                        "priority": 100
+                    }
+                }
+            },
+            "warm": {
+                "min_age": "0ms",
+                "actions": {
+                    "forcemerge": {
+                        "max_num_segments": 1
+                    }
+                }
+            },
+            "delete": {
+                "min_age": "4d",
+                "actions": {
+                    "delete": {}
+                }
+            }
+        }
+    }
+}
+PUT _ilm/policy/flight_tracks
+{
+    "policy": {
+        "phases": {
+            "hot": {
+                "min_age": "0ms",
+                "actions": {
+                    "rollover": {
+                        "max_age": "30d",
+                        "max_size": "10gb"
+                    },
+                    "set_priority": {
+                        "priority": 100
+                    }
+                }
+            },
+            "delete": {
+                "min_age": "4d",
+                "actions": {
+                    "delete": {}
+                }
+            }
+        }
+    }
+}
+
 PUT _template/flights
 {
   "index_patterns": [

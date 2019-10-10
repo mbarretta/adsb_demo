@@ -44,20 +44,20 @@ class CollectorRunnable implements Runnable {
             records.eachParallel { record ->
                 def skip = false
                 def track = [
-                    icao: record.icao,
-                    landed: record.state.onGround,
-                    aircraft: [
+                    icao      : record.icao,
+                    landed    : record.state.onGround,
+                    aircraft  : [
                         manufacturerName: record?.aircraft?.manufacturerName,
-                        model: record?.aircraft?.model,
+                        model           : record?.aircraft?.model,
                         operatorCallsign: record?.aircraft?.operatorCallsign,
-                        owner: record?.aircraft?.owner,
-                        registration: record?.aircraft?.registration
+                        owner           : record?.aircraft?.owner,
+                        registration    : record?.aircraft?.registration
                     ],
-                    state: [
-                        callsign: record.state.callsign,
-                        squawk: record.state.squawk,
+                    state     : [
+                        callsign     : record.state.callsign,
+                        squawk       : record.state.squawk,
                         originCountry: record.state.originCountry,
-                        onGround: record.state.onGround
+                        onGround     : record.state.onGround
                     ],
                     lastUpdate: record.state.timePosition
                 ]
@@ -173,7 +173,7 @@ class CollectorRunnable implements Runnable {
             .filter(QueryBuilders.termQuery("landed", false))
         def results = [:]
         client.config.index = PropertyManager.instance.properties.indices.flight_tracks
-        log.debug("getting flight tracks:\n"+query.toString())
+        log.debug("getting flight tracks:\n" + query.toString())
         client.scrollQuery(query, 5000, 4, 1) {
             def source = it.sourceAsMap
             source["_id"] = it.id
