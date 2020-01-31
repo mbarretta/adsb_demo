@@ -33,7 +33,7 @@ class Manager {
     }
 
     static void loopIt(long interval) {
-        log.info("Let's do this! ...every [$interval] seconds\n")
+        log.info("Let's do this! ...every [$interval] seconds")
 
         log.info("caching all aircraft data")
         getAllAircraft()

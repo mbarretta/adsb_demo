@@ -2,6 +2,7 @@ package com.barretta.elastic.opensky
 
 import com.barretta.elastic.clients.ESClient
 import groovy.util.logging.Slf4j
+import groovyx.gpars.AsyncFun
 import groovyx.gpars.GParsPool
 import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.client.RequestOptions
@@ -18,19 +19,17 @@ class CollectorRunnable implements Runnable {
         log.info("Starting collection")
         def esClient = Manager.getEsClient()
         try {
-            def rawRecords = collectRawRecords()
             GParsPool.withPool {
-                def doBulkLoad = {map, index, client -> client.bulk(map, index) }.asyncFun()
-                doBulkLoad([(ESClient.BulkOps.INSERT): rawRecords], PropertyManager.instance.properties.indices.opensky)
-                doBulkLoad(updateFlightTracks(rawRecords, esClient), PropertyManager.instance.properties.indices.flight_tracks)
+                def rawRecords = collectRawRecords()
+                esClient.bulk([(ESClient.BulkOps.INSERT): rawRecords.get()], PropertyManager.instance.properties.indices.opensky)
+                esClient.bulk(updateFlightTracks(rawRecords.get(), esClient), PropertyManager.instance.properties.indices.flight_tracks)
             }
             // todo maybe something for landed flights that tries to determine departure and arrival airports by
             // searching for those within some small radius of our first/last points
-            esClient.close()
         } catch (e) {
             log.error("piss", e)
         } finally {
-            esClient.close()
+//            esClient.close()
         }
     }
 
@@ -156,7 +155,8 @@ class CollectorRunnable implements Runnable {
         return bulk
     }
 
-    static List collectRawRecords() {
+    @AsyncFun
+    static Closure collectRawRecords = {
         log.trace("fetching all states")
         def allStates = OpenSkyNetworkClient.getAllStates()
         log.trace(" ...found [${allStates.states.size()}]")
@@ -168,7 +168,7 @@ class CollectorRunnable implements Runnable {
         log.trace("joining everything together")
         def esRecords = allStates.states.inject([]) { list, state ->
 
-            /*
+        /*
         we're doing some field name transformation here as well so that state data has a "state." prefix,
         flight data has "flight.", etc...
         */
