@@ -136,7 +136,7 @@ class OpenSkyNetworkClient {
                 }
             }
         } catch (JsonException e) {
-            log.debug("No data for timespan [${time - 7200}] to [$time]", e)
+            log.debug("No data for timespan [${time - 7200}] to [$time]")
         }
         return returnResponse
     }

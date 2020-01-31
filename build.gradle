@@ -7,6 +7,7 @@ applicationDefaultJvmArgs = ["-Xms4g", "-Xmx4g", "-XX:+UseG1GC"]
 
 repositories {
     mavenCentral()
+    mavenLocal()
     maven { url 'https://jitpack.io' }
 }
 
@@ -16,8 +17,9 @@ dependencies {
         'org.codehaus.gpars:gpars:1.2.1',
         'ch.qos.logback:logback-classic:1.2.3',
         'org.apache.logging.log4j:log4j-to-slf4j:2.11.2',
-        'com.github.mbarretta:es-client:a7bdb98',
-        'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.3.0'
+        'co.elastic.logging:logback-ecs-encoder:0.1.3',
+        'com.github.mbarretta:es-client:3283979',
+        'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.5.0'
     )
     testCompile('org.spockframework:spock-core:1.3-RC1-groovy-2.5') {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
@@ -32,4 +34,7 @@ tasks.withType(GroovyCompile) {
 }
 application {
     mainClassName = 'com.barretta.elastic.opensky.Manager'
+}
+artifacts {
+    archives sourcesJar
 }

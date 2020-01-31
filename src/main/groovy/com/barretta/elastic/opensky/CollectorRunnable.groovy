@@ -1,6 +1,6 @@
 package com.barretta.elastic.opensky
 
-import com.elastic.barretta.clients.ESClient
+import com.barretta.elastic.clients.ESClient
 import groovy.transform.Synchronized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
@@ -10,7 +10,7 @@ import org.elasticsearch.index.query.BoolQueryBuilder
 import org.elasticsearch.index.query.QueryBuilders
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ConcurrentHashMap
 
 @Slf4j
 class CollectorRunnable implements Runnable {
@@ -20,7 +20,9 @@ class CollectorRunnable implements Runnable {
         try {
             def rawRecords = collectRawRecords()
             esClient.bulk([(ESClient.BulkOps.INSERT): rawRecords], PropertyManager.instance.properties.indices.opensky)
-            esClient.bulk([(ESClient.BulkOps.INSERT): updateFlightTracks(rawRecords, esClient)], PropertyManager.instance.properties.indices.flight_tracks)
+            esClient.bulk(updateFlightTracks(rawRecords, esClient), PropertyManager.instance.properties.indices.flight_tracks)
+            // todo maybe something for landed flights that tries to determine departure and arrival airports by
+            // searching for those within some small radius of our first/last points
             esClient.close()
         } catch (e) {
             log.error("piss", e)
@@ -30,62 +32,54 @@ class CollectorRunnable implements Runnable {
     }
 
     @Synchronized
-    static List updateFlightTracks(records, ESClient client) {
-        def tracks = [] as ConcurrentLinkedQueue
+    static Map<ESClient.BulkOps, List<Map>> updateFlightTracks(List records, ESClient client) {
+
+        //init our bulk op holder
+        def bulk = [:] as ConcurrentHashMap
+        bulk[ESClient.BulkOps.CREATE] = []
+        bulk[ESClient.BulkOps.UPDATE] = []
 
         GParsPool.withPool {
             client.config.index = PropertyManager.instance.properties.indices.flight_tracks
 
             //gather _ids for any existing tracks for this batch of records
             def trackIds = getFlightTracks(records, client)
-//            def landedIds = getLandedFlights(records, client)
 
             //build up our new tracks
             records.eachParallel { record ->
                 def skip = false
-                def track = [
-                    icao      : record.icao,
-                    landed    : record.state.onGround,
-                    aircraft  : [
-                        manufacturerName: record?.aircraft?.manufacturerName,
-                        model           : record?.aircraft?.model,
-                        operatorCallsign: record?.aircraft?.operatorCallsign,
-                        owner           : record?.aircraft?.owner,
-                        registration    : record?.aircraft?.registration
-                    ],
-                    state     : [
-                        callsign     : record.state.callsign,
-                        squawk       : record.state.squawk,
-                        originCountry: record.state.originCountry,
-                        onGround     : record.state.onGround
-                    ],
-                    lastUpdate: record.state.timePosition
-                ]
-                if (record.flight) {
-                    track << [
-                        departureAirport: record.flight.estDepartureAirport,
-                        arrivalAirport  : record.flight.estArrivalAirport,
-                        firstSeen       : record.flight.firstSeen,
-                        lastSeen        : record.flight.lastSeen,
-                        flightTimeMin   : (record.flight.lastSeen - record.flight.firstSeen) / 60 //convert to minutes
-                    ]
-                }
+                def bulkOp = ESClient.BulkOps.UPDATE
+
+                //we get bad data that say the plane is on the ground, but it's still surely flying
+                def reallyLanded = record.state.onGround && record.state.geoAltitude < 50 && record.state.velocity < 70 && record.state.verticalRate == 0
+
                 def coordinates = []
+                def track = [lastUpdate: record.state.timePosition]
 
                 //add points to existing track, if we have one
                 if (trackIds.containsKey(record.icao)) {
                     def hit = trackIds.get(record.icao)
                     coordinates = hit.track.coordinates
                     track << [_id: hit._id]
+                    log.trace("existing record: icao [$record.icao] matches id [$hit._id]")
 
-                    //we don't want to overwrite our record with empties, so if we didn't get a flight record this time, use existing values
-                    if (!track.departureAirport && hit.departureAirport) {
+                    //if we had no flight info and we see some now, set it
+                    if (!hit.flight && record.departureAirport) {
                         track << [
                             departureAirport: hit.departureAirport,
                             arrivalAirport  : hit.arrivalAirport,
-                            firstSeen       : hit.firstSeen,
-                            lastSeen        : hit.lastSeen,
-                            flightTimeMin   : (hit.lastSeen - hit.firstSeen) / 60 //convert to minutes
+                        ]
+                    }
+                    //if we had no aircraft info and we see some now, set it
+                    if (!hit.aircraft && record.aircraft) {
+                        track << [
+                            aircraft: [
+                                manufacturerName: record.aircraft?.manufacturerName,
+                                model           : record.aircraft?.model,
+                                operatorCallsign: record.aircraft?.operatorCallsign,
+                                owner           : record.aircraft?.owner,
+                                registration    : record.aircraft?.registration
+                            ]
                         ]
                     }
 
@@ -95,18 +89,56 @@ class CollectorRunnable implements Runnable {
                     } else {
                         skip = true
                     }
+
+                    if (reallyLanded) {
+                        log.debug("flight [${record.icao}] landed")
+
+                        //set "final" bits for the flight
+                        track.landed = true
+                        track.state = [onGround: true]
+                        //not sure why I'm storing this info twice...think for kibana filters so that this will match with flights index schema
+                        track.lastSeen = record.state.timePosition
+                        track.flightTimeMin = hit.firstSeen ? (track.lastSeen - hit.firstSeen / 60) : null
+                    }
                 }
 
                 //if we don't have an existing track record, we'll actually need to add this one point twice since you
                 //can't have a one-point line
                 else {
+                    log.trace("no match for icao [$record.icao]")
                     //if we don't have an existing non-landed track, but this is a landed flight, that means it hasn't
                     //taken off again, so we don't need to write the record
-                    if (record.state.onGround) {
+                    if (reallyLanded) {
                         skip = true
+                    } else {
+                        bulkOp = ESClient.BulkOps.CREATE
+                        track << [
+                            icao     : record.icao,
+                            landed   : reallyLanded,
+                            firstSeen: record.state.timePosition,
+                            aircraft : [
+                                manufacturerName: record?.aircraft?.manufacturerName,
+                                model           : record?.aircraft?.model,
+                                operatorCallsign: record?.aircraft?.operatorCallsign,
+                                owner           : record?.aircraft?.owner,
+                                registration    : record?.aircraft?.registration
+                            ],
+                            state    : [
+                                callsign     : record.state.callsign,
+                                squawk       : record.state.squawk,
+                                originCountry: record.state.originCountry,
+                                onGround     : reallyLanded
+                            ]
+                        ]
+                        if (record.flight) {
+                            track << [
+                                departureAirport: record.flight.estDepartureAirport,
+                                arrivalAirport  : record.flight.estArrivalAirport
+                            ]
+                        }
+                        coordinates << [record.state.location.lon, record.state.location.lat]
+                        coordinates << [record.state.location.lon, record.state.location.lat]
                     }
-                    coordinates << [record.state.location.lon, record.state.location.lat]
-                    coordinates << [record.state.location.lon, record.state.location.lat]
                 }
 
                 //little hacky cleaning
@@ -114,11 +146,11 @@ class CollectorRunnable implements Runnable {
 
                 if (coordinates.size() > 0 && !skip) {
                     track << [track: [type: "LineString", coordinates: coordinates]]
-                    tracks.add(track)
+                    bulk[bulkOp] << track
                 }
             }
         }
-        return tracks.toList()
+        return bulk
     }
 
     static List collectRawRecords() {
@@ -171,15 +203,15 @@ class CollectorRunnable implements Runnable {
         def query = new BoolQueryBuilder()
             .filter(QueryBuilders.termsQuery("icao", records.collectParallel { it.icao }))
             .filter(QueryBuilders.termQuery("landed", false))
-        def results = [:]
+        def results = [:] as ConcurrentHashMap
         client.config.index = PropertyManager.instance.properties.indices.flight_tracks
-        log.debug("getting flight tracks:\n" + query.toString())
+        log.trace("getting flight tracks:\n" + query.toString())
         client.scrollQuery(query, 5000, 4, 1) {
             def source = it.sourceAsMap
             source["_id"] = it.id
             results << [(source.icao): source]
         }
-
+        log.debug("found [${results.size()}] flight tracks")
         return results
     }
 

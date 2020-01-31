@@ -1,15 +1,9 @@
 package com.barretta.elastic.opensky
 
-import com.elastic.barretta.clients.ESClient
+import com.barretta.elastic.clients.ESClient
 import groovy.cli.commons.CliBuilder
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsExecutorsPool
-import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest
-import org.elasticsearch.client.RequestOptions
-import org.elasticsearch.client.indices.GetIndexRequest
-import org.elasticsearch.client.indices.rollover.RolloverRequest
-import org.elasticsearch.common.unit.ByteSizeUnit
-import org.elasticsearch.common.unit.ByteSizeValue
 import org.elasticsearch.index.query.MatchAllQueryBuilder
 
 import java.util.concurrent.ConcurrentHashMap
@@ -42,19 +36,6 @@ class Manager {
         log.info("caching all aircraft data")
         getAllAircraft()
 
-        //setup a recurring task to hit the rollover api once per minute
-        if (PropertyManager.instance.properties.rollover.enabled == true) {
-            def rolloverTask = new TimerTask() {
-                @Override
-                void run() {
-                    rollover(PropertyManager.instance.properties.indices.opensky)
-                    rollover(PropertyManager.instance.properties.indices.flight_tracks)
-                }
-            }
-            def rolloverTimer = new Timer()
-            rolloverTimer.scheduleAtFixedRate(rolloverTask, 0, 60000)
-        }
-
         //we're doing this instead of something like Executor.scheduleAtFixRate because we want these tasks to overlap
         //and the Executor says:
         // " If any execution of this task takes longer than its period, then subsequent executions may start late,
@@ -71,39 +52,6 @@ class Manager {
         }
     }
 
-    static def rollover(index) {
-        def props = PropertyManager.instance.properties
-
-        RolloverRequest request = new RolloverRequest(index, null)
-        request.addMaxIndexDocsCondition(props.rollover.max_docs)
-        request.addMaxIndexSizeCondition(new ByteSizeValue(props.rollover.max_size_gb, ByteSizeUnit.GB))
-
-        def esClient = getEsClient()
-        try {
-            def response = esClient.indices().rollover(request, RequestOptions.DEFAULT)
-            if (response.isRolledOver()) {
-                log.info("Rollover complete: [$response.oldIndex] --> [$response.newIndex]")
-
-                //if we rolled over, we can drop an older one, if so configured
-                if (props.rollover.delete_older_than) {
-                    def newIndexIndex = (response.newIndex =~ /.*-(\d+)/)[0][1]
-                    def oldIndexIndex = ((newIndexIndex as int) - props.rollover.delete_older_than) as String
-                    def oldIndex = "${index}-${oldIndexIndex.padLeft(6, "0")}"
-                    if (esClient.indices().exists(new GetIndexRequest().indices(oldIndex), RequestOptions.DEFAULT)) {
-                        esClient.indices().delete(new DeleteIndexRequest(oldIndex), RequestOptions.DEFAULT)
-                        log.info("deleted old index [$oldIndex]")
-                    }
-                }
-            } else {
-                log.debug("No rollover needed: $response.conditionStatus")
-            }
-        } catch (e) {
-            log.error("nuts", e)
-        } finally {
-            esClient.close()
-        }
-    }
-
     static def getAllAircraft() {
         if (aircraft.isEmpty()) {
             def esClient = getEsClient()
@@ -112,7 +60,7 @@ class Manager {
             esClient.scrollQuery(new MatchAllQueryBuilder(), 5000, 2, 1) { it ->
                 def map = it.getSourceAsMap()
                 if (map) {
-                    this.aircraft.put(map.remove("icao"), [ aircraft: map ] )
+                    aircraft.put(map.remove("icao"), [aircraft: map])
                 }
             }
             esClient.close()
