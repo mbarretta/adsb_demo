@@ -8,6 +8,8 @@ import org.elasticsearch.index.query.MatchAllQueryBuilder
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @Slf4j
 class Manager {
@@ -41,15 +43,17 @@ class Manager {
         // " If any execution of this task takes longer than its period, then subsequent executions may start late,
         //   but will not concurrently execute."
         //wtf?
-        def threads = PropertyManager.instance.properties.maxThreads ?: Runtime.getRuntime().availableProcessors() - 1
-        GParsExecutorsPool.withPool(threads) { ExecutorService service ->
-            while (true) {
-                service.execute(new CollectorRunnable())
-                log.trace("sleeping [$interval] seconds...")
-                Thread.sleep(interval * 1000)
-                log.trace("...done")
-            }
-        }
+//        def threads = PropertyManager.instance.properties.maxThreads ?: Runtime.getRuntime().availableProcessors() - 1
+//        GParsExecutorsPool.withPool(threads) { ExecutorService service ->
+//            while (true) {
+//                service.execute(new CollectorRunnable())
+//                log.trace("sleeping [$interval] seconds...")
+//                Thread.sleep(interval * 1000)
+//                log.trace("...done")
+//            }
+//        }
+        def executor = Executors.newSingleThreadScheduledExecutor()
+        executor.scheduleAtFixedRate(new CollectorRunnable(), 0, 10, TimeUnit.SECONDS)
     }
 
     static def getAllAircraft() {
@@ -60,7 +64,7 @@ class Manager {
             esClient.scrollQuery(new MatchAllQueryBuilder(), 5000, 2, 1) { it ->
                 def map = it.getSourceAsMap()
                 if (map) {
-                    aircraft.put(map.remove("icao"), [aircraft: map])
+                    aircraft.put(map.remove("icao"), [ aircraft: map ] )
                 }
             }
             esClient.close()

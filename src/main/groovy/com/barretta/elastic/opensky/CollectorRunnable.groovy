@@ -1,7 +1,6 @@
 package com.barretta.elastic.opensky
 
 import com.barretta.elastic.clients.ESClient
-import groovy.transform.Synchronized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsPool
 import org.elasticsearch.action.search.SearchRequest
@@ -16,11 +15,15 @@ import java.util.concurrent.ConcurrentHashMap
 class CollectorRunnable implements Runnable {
     @Override
     void run() {
+        log.info("Starting collection")
         def esClient = Manager.getEsClient()
         try {
             def rawRecords = collectRawRecords()
-            esClient.bulk([(ESClient.BulkOps.INSERT): rawRecords], PropertyManager.instance.properties.indices.opensky)
-            esClient.bulk(updateFlightTracks(rawRecords, esClient), PropertyManager.instance.properties.indices.flight_tracks)
+            GParsPool.withPool {
+                def doBulkLoad = {map, index, client -> client.bulk(map, index) }.asyncFun()
+                doBulkLoad([(ESClient.BulkOps.INSERT): rawRecords], PropertyManager.instance.properties.indices.opensky)
+                doBulkLoad(updateFlightTracks(rawRecords, esClient), PropertyManager.instance.properties.indices.flight_tracks)
+            }
             // todo maybe something for landed flights that tries to determine departure and arrival airports by
             // searching for those within some small radius of our first/last points
             esClient.close()
@@ -31,7 +34,6 @@ class CollectorRunnable implements Runnable {
         }
     }
 
-    @Synchronized
     static Map<ESClient.BulkOps, List<Map>> updateFlightTracks(List records, ESClient client) {
 
         //init our bulk op holder
@@ -47,6 +49,7 @@ class CollectorRunnable implements Runnable {
 
             //build up our new tracks
             records.eachParallel { record ->
+                log.trace("updating track for [$record.icao]")
                 def skip = false
                 def bulkOp = ESClient.BulkOps.UPDATE
 
@@ -166,9 +169,9 @@ class CollectorRunnable implements Runnable {
         def esRecords = allStates.states.inject([]) { list, state ->
 
             /*
-            we're doing some field name transformation here as well so that state data has a "state." prefix,
-            flight data has "flight.", etc...
-            */
+        we're doing some field name transformation here as well so that state data has a "state." prefix,
+        flight data has "flight.", etc...
+        */
 
             def record = [icao: state.icao, _id: state._id]
 
@@ -196,6 +199,7 @@ class CollectorRunnable implements Runnable {
             list << record
         }
         log.info("Collected { states: [${allStates.states.size()}], flights: [${allFlights.flights.size()}] }")
+
         return esRecords
     }
 
@@ -205,7 +209,7 @@ class CollectorRunnable implements Runnable {
             .filter(QueryBuilders.termQuery("landed", false))
         def results = [:] as ConcurrentHashMap
         client.config.index = PropertyManager.instance.properties.indices.flight_tracks
-        log.trace("getting flight tracks:\n" + query.toString())
+//        log.trace("getting flight tracks:\n" + query.toString())
         client.scrollQuery(query, 5000, 4, 1) {
             def source = it.sourceAsMap
             source["_id"] = it.id
