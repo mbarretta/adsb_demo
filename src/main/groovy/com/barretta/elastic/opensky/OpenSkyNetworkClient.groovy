@@ -102,7 +102,7 @@ class OpenSkyNetworkClient {
     static AllFlightsResponse getAllFlights(time) {
         def returnResponse = new AllFlightsResponse()
 
-        //this try{} is a bit ugly, but simple means of dealing with empty results, which end are sent as a 404
+        //this try{} is a bit ugly, but simple means of dealing with empty results, which are sent as a 404
         try {
             //get all flights within the last 2 hours per API rules
             def rawResponse = new JsonSlurper().parse("${PropertyManager.instance.properties.openSky.url}/flights/all?begin=${time - 7200}&end=$time".toURL())

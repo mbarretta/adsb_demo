@@ -3,11 +3,9 @@ package com.barretta.elastic.opensky
 import com.barretta.elastic.clients.ESClient
 import groovy.cli.commons.CliBuilder
 import groovy.util.logging.Slf4j
-import groovyx.gpars.GParsExecutorsPool
 import org.elasticsearch.index.query.MatchAllQueryBuilder
 
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -53,7 +51,7 @@ class Manager {
 //            }
 //        }
         def executor = Executors.newSingleThreadScheduledExecutor()
-        executor.scheduleAtFixedRate(new CollectorRunnable(), 0, 10, TimeUnit.SECONDS)
+        executor.scheduleAtFixedRate(new CollectorRunnable(getEsClient()), 0, 10, TimeUnit.SECONDS)
     }
 
     static def getAllAircraft() {
@@ -64,7 +62,7 @@ class Manager {
             esClient.scrollQuery(new MatchAllQueryBuilder(), 5000, 2, 1) { it ->
                 def map = it.getSourceAsMap()
                 if (map) {
-                    aircraft.put(map.remove("icao"), [ aircraft: map ] )
+                    aircraft.put(map.remove("icao"), [aircraft: map])
                 }
             }
             esClient.close()
