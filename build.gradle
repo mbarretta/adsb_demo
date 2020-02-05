@@ -25,7 +25,6 @@ dependencies {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }
     runtimeOnly 'co.elastic.apm:elastic-apm-agent:1.12.0'
-    runtimeOnly files('src/main/dist/config')
 }
 
 task sourcesJar(type: Jar) {
@@ -43,7 +42,8 @@ application {
         "-Delastic.apm.service_name=adsb_demo",
         "-Delastic.apm.application_pacakges=com.barretta.elastic",
         "-Delastic.apm.server_urls=${config.apm.url}",
-        "-Delastic.apm.secret_token=${config.apm.token}"
+        "-Delastic.apm.secret_token=${config.apm.token}",
+        "-Dlogback.configurationFile=logback.groovy"
     ]
 }
 artifacts {
@@ -51,5 +51,5 @@ artifacts {
 }
 
 def loadProperties() {
-    project.ext.config = new ConfigSlurper().parse(file('src/main/dist/config/properties.groovy').toURI().toURL())
+    project.ext.config = new ConfigSlurper().parse(file('src/dist/properties.groovy').toURI().toURL())
 }

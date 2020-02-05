@@ -13,13 +13,11 @@ import java.util.concurrent.TimeUnit
 class Manager {
 
     static def aircraft = [:] as ConcurrentHashMap
-    static def configFile = "./config/properties.groovy"
 
     //todo add setup option that creates the index templates, rollover, etc., plus the aircraft index from the csv
     static void main(String[] args) {
         def cli = new CliBuilder(usage: "adsb_demo")
         cli.loopInterval(args: 1, argName: "seconds", "seconds between loops")
-        cli.propertiesFile(args:1, argName: "path", "full path to properties.groovy")
         cli.help("print this message")
         def options = cli.parse(args)
 
@@ -27,9 +25,7 @@ class Manager {
             cli.usage()
             System.exit(0)
         }
-        if (options.propertiesFile) {
-            configFile = options.propertiesFile
-        }
+
         def interval = options.loopInterval ? Long.valueOf(options.loopInterval) : 5l
         loopIt(interval)
     }

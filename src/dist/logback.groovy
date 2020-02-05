@@ -1,5 +1,5 @@
 import PatternLayoutEncoder
-import EcsEncoder
+import co.elastic.logging.logback.EcsEncoder
 
 scan("30 seconds")
 appender("FILE", RollingFileAppender) {
@@ -19,4 +19,4 @@ appender("STDOUT", ConsoleAppender) {
         pattern = "%date{MM.dd.yyyy HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n"
     }
 }
-root(INFO, ["FILE", "STDOUT"])
+root(ch.qos.logback.classic.Level.INFO, ["FILE", "STDOUT"])
