@@ -3,6 +3,10 @@ es {
     user = ""
     pass = ""
 }
+apm {
+    url = "http://localhost:8200"
+    token = ""
+}
 openSky {
     url = "https://opensky-network.org/api"
 }

@@ -1,6 +1,7 @@
-import ch.qos.logback.classic.encoder.PatternLayoutEncoder
-import co.elastic.logging.logback.EcsEncoder
+import PatternLayoutEncoder
+import EcsEncoder
 
+scan("30 seconds")
 appender("FILE", RollingFileAppender) {
     file = "log.log"
     rollingPolicy(SizeAndTimeBasedRollingPolicy) {
@@ -10,7 +11,6 @@ appender("FILE", RollingFileAppender) {
         totalSizeCap = "1GB"
     }
     encoder(EcsEncoder) {
-
         serviceName = "adsb_demo"
     }
 }
@@ -19,4 +19,4 @@ appender("STDOUT", ConsoleAppender) {
         pattern = "%date{MM.dd.yyyy HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n"
     }
 }
-root(TRACE, ["FILE", "STDOUT"])
+root(INFO, ["FILE", "STDOUT"])

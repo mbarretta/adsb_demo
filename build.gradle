@@ -3,17 +3,17 @@ version '1.0'
 
 apply plugin: 'groovy'
 apply plugin: 'application'
-applicationDefaultJvmArgs = ["-Xms4g", "-Xmx4g", "-XX:+UseG1GC"]
+
+loadProperties()
 
 repositories {
     mavenCentral()
     mavenLocal()
     maven { url 'https://jitpack.io' }
 }
-
 dependencies {
     compile(
-        'org.codehaus.groovy:groovy-all:2.5.5',
+        'org.codehaus.groovy:groovy-all:2.5.7',
         'org.codehaus.gpars:gpars:1.2.1',
         'ch.qos.logback:logback-classic:1.2.3',
         'org.apache.logging.log4j:log4j-to-slf4j:2.11.2',
@@ -24,7 +24,10 @@ dependencies {
     testCompile('org.spockframework:spock-core:1.3-RC1-groovy-2.5') {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }
+    runtimeOnly 'co.elastic.apm:elastic-apm-agent:1.12.0'
+    runtimeOnly files('src/main/dist/config')
 }
+
 task sourcesJar(type: Jar) {
     from sourceSets.main.allSource
     classifier = 'sources'
@@ -34,7 +37,19 @@ tasks.withType(GroovyCompile) {
 }
 application {
     mainClassName = 'com.barretta.elastic.opensky.Manager'
+    applicationDefaultJvmArgs = [
+        "-Xms4g", "-Xmx4g", "-XX:+UseG1GC",
+        "-javaagent:lib/elastic-apm-agent-1.12.0.jar",
+        "-Delastic.apm.service_name=adsb_demo",
+        "-Delastic.apm.application_pacakges=com.barretta.elastic",
+        "-Delastic.apm.server_urls=${config.apm.url}",
+        "-Delastic.apm.secret_token=${config.apm.token}"
+    ]
 }
 artifacts {
     archives sourcesJar
+}
+
+def loadProperties() {
+    project.ext.config = new ConfigSlurper().parse(file('src/main/dist/config/properties.groovy').toURI().toURL())
 }
