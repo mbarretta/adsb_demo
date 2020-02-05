@@ -51,7 +51,8 @@ class Manager {
 //            }
 //        }
         def executor = Executors.newSingleThreadScheduledExecutor()
-        executor.scheduleAtFixedRate(new CollectorRunnable(getEsClient()), 0, 10, TimeUnit.SECONDS)
+        def client = getEsClient()
+        executor.scheduleAtFixedRate(new CollectorRunnable(client), 0, 10, TimeUnit.SECONDS)
     }
 
     static def getAllAircraft() {
