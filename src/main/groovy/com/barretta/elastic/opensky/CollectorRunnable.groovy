@@ -13,11 +13,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 @Slf4j
 class CollectorRunnable implements Runnable {
-    ESClient esClient
-
-    CollectorRunnable(ESClient client) {
-        esClient = client
-    }
 
     @Override
     void run() {
@@ -25,12 +20,11 @@ class CollectorRunnable implements Runnable {
 
         try {
             def rawRecords = collectRawRecords()
-            esClient.bulk([(ESClient.BulkOps.INSERT): rawRecords], PropertyManager.instance.properties.indices.opensky)
-            esClient.bulk(updateFlightTracks(rawRecords), PropertyManager.instance.properties.indices.flight_tracks)
+            Manager.esClient.bulk([(ESClient.BulkOps.INSERT): rawRecords], PropertyManager.instance.properties.indices.opensky)
+            Manager.esClient.bulk(updateFlightTracks(rawRecords), PropertyManager.instance.properties.indices.flight_tracks)
         } catch (e) {
             log.error("doh [$e.cause] [$e.message]", e)
         }
-
         // todo maybe something for landed flights that tries to determine departure and arrival airports by
         // searching for those within some small radius of our first/last points
     }
@@ -62,8 +56,8 @@ class CollectorRunnable implements Runnable {
                 if (trackIds.containsKey(record.icao)) {
                     def hit = trackIds.get(record.icao)
                     coordinates = hit.track.coordinates
-                    track << [_id: hit._id]
-                    log.trace("existing record: icao [$record.icao] matches id [$hit._id]")
+                    track << [_id: hit._id, _index: hit._index]
+                    log.trace("existing record: icao [$record.icao] matches id [$hit._id] in index [$hit._index]")
 
                     //if we had no flight info and we see some now, set it
                     if (!hit.flight && record.departureAirport) {
@@ -208,18 +202,17 @@ class CollectorRunnable implements Runnable {
     }
 
     static def getFlightTracks(records) {
-        def localEsClient = Manager.esClient
-        localEsClient.config.index = PropertyManager.instance.properties.indices.flight_tracks
-
         def query = new BoolQueryBuilder()
             .filter(QueryBuilders.termsQuery("icao", records.collect { it.icao }))
             .filter(QueryBuilders.termQuery("landed", false))
 //        log.trace("getting flight tracks:\n" + query.toString())
 
         def results = [:] as ConcurrentHashMap
-        localEsClient.scrollQuery(query, 1500, 4, 1) {
+        Manager.esClient.scrollQuery(query, 1500, 4, 1, PropertyManager.instance.properties.indices.flight_tracks) {
+
             def source = it.sourceAsMap
             source["_id"] = it.id
+            source["_index"] = it.index
             results << [(source.icao): source]
         }
         log.debug("found [${results.size()}] flight tracks")

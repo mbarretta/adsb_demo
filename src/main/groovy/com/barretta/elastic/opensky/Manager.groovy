@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit
 class Manager {
 
     static def aircraft = [:] as ConcurrentHashMap
+    private static ESClient esClient = getEsClient()
 
     //todo add setup option that creates the index templates, rollover, etc., plus the aircraft index from the csv
     static void main(String[] args) {
@@ -51,13 +52,11 @@ class Manager {
 //            }
 //        }
         def executor = Executors.newSingleThreadScheduledExecutor()
-        def client = getEsClient()
-        executor.scheduleAtFixedRate(new CollectorRunnable(client), 0, 10, TimeUnit.SECONDS)
+        executor.scheduleAtFixedRate(new CollectorRunnable(), 0, 10, TimeUnit.SECONDS)
     }
 
     static def getAllAircraft() {
         if (aircraft.isEmpty()) {
-            def esClient = getEsClient()
             esClient.config.index = PropertyManager.instance.properties.indices.aircraft
 
             esClient.scrollQuery(new MatchAllQueryBuilder(), 5000, 2, 1) { it ->
@@ -66,12 +65,11 @@ class Manager {
                     aircraft.put(map.remove("icao"), [aircraft: map])
                 }
             }
-            esClient.close()
         }
         return aircraft
     }
 
     static def getEsClient() {
-        return new ESClient(PropertyManager.instance.properties.es as ESClient.Config)
+        return esClient ? esClient : new ESClient(PropertyManager.instance.properties.es as ESClient.Config)
     }
 }
