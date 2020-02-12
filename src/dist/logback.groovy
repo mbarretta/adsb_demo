@@ -12,6 +12,10 @@ appender("FILE", RollingFileAppender) {
     }
     encoder(EcsEncoder) {
         serviceName = "adsb_demo"
+        additionalField(EcsEncoder.Pair) {
+            key="event.dataset"
+            value="adsb_demo"
+        }
     }
 }
 appender("STDOUT", ConsoleAppender) {

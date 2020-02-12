@@ -206,7 +206,6 @@ class CollectorRunnable implements Runnable {
             .filter(QueryBuilders.termsQuery("icao", records.collect { it.icao }))
             .filter(QueryBuilders.termQuery("landed", false))
 //        log.trace("getting flight tracks:\n" + query.toString())
-
         def results = [:] as ConcurrentHashMap
         Manager.esClient.scrollQuery(query, 1500, 4, 1, PropertyManager.instance.properties.indices.flight_tracks) {
 
