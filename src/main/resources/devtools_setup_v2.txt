@@ -1,0 +1,701 @@
+PUT _logstash/pipeline/opensky-data
+{
+  "description": "ingest data from opensky-network.org",
+  "pipeline_metadata": {
+    "version": 1,
+    "type": "logstash_pipeline"
+  },
+  "username": "elastic",
+  "pipeline": """
+input {
+  http_poller {
+      codec => "json"
+      schedule => { every => "15s" }
+      urls => {
+          url => "https://opensky-network.org/api/states/all"
+      }
+  }
+}
+filter {
+    split {
+        field => "states"
+        add_field => {
+            "icao" => "%{[states][0]}"
+            "callsign" => "%{[states][1]}"
+            "origin_country" => "%{[states][2]}"
+            "time_position" => "%{[states][3]}"
+            "last_contact" => "%{[states][4]}"
+            "location" => "%{[states][6]},%{[states][5]}"
+            "baro_altitude" => "%{[states][7]}"
+            "on_ground" => "%{[states][8]}"
+            "velocity" => "%{[states][9]}"
+            "true_track" => "%{[states][10]}"
+            "vertical_rate" => "%{[states][11]}"
+            "geo_altitude" => "%{[states][13]}"
+            "squawk" => "%{[states][14]}"
+            "spi" => "%{[states][15]}"
+            "position_source" => "%{[states][16]}"
+        }
+    }
+    mutate {
+        strip => ["callsign"]
+        rename => { "time" => "request_time" }
+        remove_field => ["states", "@version"]
+    }
+    translate {
+        field => "[position_source]"
+        destination => "position_source"
+        override => "true"
+        dictionary => {
+          "0" => "ADS-B"
+          "1" => "ASTERIX"
+          "2" => "MLAB"
+        }
+    } 
+    if [time_position] =~ /^%{*/ {
+        drop { }
+    }
+    if [icao] =~ /^%{*/ {
+        drop { }
+    }
+    if [callsign] =~ /^%{*/ {
+        mutate { remove_field => ["callsign"] }
+    }
+    if [location] =~ /^%{*/ {
+        mutate { remove_field => ["location"] }
+    }
+    if [baro_altitude] =~ /^%{*/ {
+        mutate { remove_field => ["baro_altitude"] }
+    }
+    if [velocity] =~ /^%{*/ {
+        mutate { remove_field => ["velocity"] }
+    }
+    if [true_track] =~ /^%{*/ {
+        mutate { remove_field => ["true_track"] }
+    }
+    if [vertical_rate] =~ /^%{*/ {
+        mutate { remove_field => ["vertical_rate"] }
+    }
+    if [sensors] =~ /^%{*/ {
+        mutate { remove_field => ["sensors"] }
+    }
+    if [geo_altitude] =~ /^%{*/ {
+        mutate { remove_field => ["geo_altitude"] }
+    }
+    if [squawk] =~ /^%{*/ {
+        mutate { remove_field => ["squawk"] }
+    }
+}
+output {
+    elasticsearch {
+        manage_template => "false"
+        index => "flights"
+        pipeline => "flights_aircraft_enrichment"
+        hosts => "<YOUR HOST>"
+        user => "<YOUR USER>"
+        password => "<YOUR PASSWORD">
+    }
+}
+""",
+  "pipeline_settings": {
+    "pipeline.batch.delay": 50,
+    "pipeline.batch.size": 1,
+    "pipeline.workers": 4,
+    "queue.checkpoint.writes": 1024,
+    "queue.max_bytes": "1gb",
+    "queue.type": "memory"
+  }
+}
+
+PUT _ingest/pipeline/flights_aircraft_enrichment
+{
+  "description": "joins incoming ADSB state info with richer aircraft and airline metadata as well as adds some \"imperial\" units (feet, mph)",
+  "processors": [
+    {
+      "enrich": {
+        "description": "add aircraft data via icao",
+        "policy_name": "flights_policy",
+        "field": "icao",
+        "target_field": "aircraft"
+      }
+    },
+    {
+      "enrich": {
+        "description": "add airline data via operator_name if not null",
+        "if": "ctx.aircraft?.operator_name != null",
+        "policy_name": "airline-policy-name",
+        "field": "aircraft.operator_name",
+        "target_field": "airline"
+      }
+    },
+    {
+      "enrich": {
+        "description": "add airline data via operator_icao if not null",
+        "if": "ctx.aircraft?.operator_icao != null",
+        "policy_name": "airline-policy-icao",
+        "field": "aircraft.operator_icao",
+        "target_field": "airline"
+      }
+    },
+    {
+      "enrich": {
+        "description": "add airline data via operator_iata if not null",
+        "if": "ctx.aircraft?.operator_iata != null",
+        "policy_name": "airline-policy-iata",
+        "field": "aircraft.operator_iata",
+        "target_field": "airline"
+      }
+    },
+    {
+      "script": {
+        "description": "create a baro_altitude_feet field from baro_altitude in meters",
+        "if": "ctx.baro_altitude != null",
+        "lang": "painless",
+        "source": "ctx.baro_altitude_feet = Math.round(Double.parseDouble(ctx.baro_altitude) * 3.28084)"
+      }
+    },
+    {
+      "script": {
+        "description": "create a geo_altitude_feet field from geo_altitude in meters",
+        "if": "ctx.geo_altitude != null",
+        "lang": "painless",
+        "source": "ctx.geo_altitude_feet = Math.round(Double.parseDouble(ctx.geo_altitude) * 3.28084)"
+      }
+    },
+    {
+      "script": {
+        "description": "create a velocity_mph field velocity in meters per second",
+        "if": "ctx.velocity != null",
+        "lang": "painless",
+        "source": "ctx.velocity_mph = Math.round(Double.parseDouble(ctx.velocity) * 2.23694)"
+      }
+    }
+  ]
+}
+PUT _enrich/policy/airline-policy-iata
+{
+  "match": {
+    "indices": "airlines",
+    "match_field": "iata",
+    "enrich_fields": [
+      "name",
+      "country",
+      "icao"
+    ]
+  }
+}
+PUT _enrich/policy/airline-policy-iata/_execute
+PUT _enrich/policy/airline-policy-icao
+{
+  "match": {
+    "indices": "airlines",
+    "match_field": "icao",
+    "enrich_fields": [
+      "name",
+      "country",
+      "iata"
+    ]
+  }
+}
+PUT _enrich/policy/airline-policy-icao/_execute
+PUT _enrich/policy/airline-policy-name
+{
+  "match": {
+    "indices": "airlines",
+    "match_field": "name",
+    "enrich_fields": [
+      "icao",
+      "country",
+      "iata"
+    ]
+  }
+}
+PUT _enrich/policy/airline-policy-name/_execute
+PUT _enrich/policy/flights_policy
+{
+  "match": {
+    "indices": "aircraft",
+    "match_field": "icao",
+    "enrich_fields": [
+      "acars",
+      "adsb",
+      "built",
+      "category_description",
+      "engines",
+      "first_flight_date",
+      "icao_aircraft_type",
+      "line_number",
+      "manufacturer_icao",
+      "manufacturer_name",
+      "model",
+      "modes",
+      "notes",
+      "operator",
+      "operator_callsign",
+      "operator_iata",
+      "operator_icao",
+      "owner",
+      "reg_until",
+      "registered",
+      "registration",
+      "seat_configuration",
+      "serial_number",
+      "status",
+      "test_reg",
+      "type_code"
+    ]
+  }
+}
+PUT _enrich/policy/flights_policy/_execute
+
+PUT _ingest/pipeline/flights_aircraft_enrichment
+{
+  "description": "joins incoming ADSB state info with richer aircraft and airline metadata as well as adds some \"imperial\" units (feet, mph)",
+  "processors": [
+    {
+      "enrich": {
+        "description": "add aircraft data via icao",
+        "policy_name": "flights_policy",
+        "field": "icao",
+        "target_field": "aircraft"
+      }
+    },
+    {
+      "enrich": {
+        "description": "add airline data via operator_name if not null",
+        "if": "ctx.aircraft?.operator_name != null",
+        "policy_name": "airline-policy-name",
+        "field": "aircraft.operator_name",
+        "target_field": "airline"
+      }
+    },
+    {
+      "enrich": {
+        "description": "add airline data via operator_icao if not null",
+        "if": "ctx.aircraft?.operator_icao != null",
+        "policy_name": "airline-policy-icao",
+        "field": "aircraft.operator_icao",
+        "target_field": "airline"
+      }
+    },
+    {
+      "enrich": {
+        "description": "add airline data via operator_iata if not null",
+        "if": "ctx.aircraft?.operator_iata != null",
+        "policy_name": "airline-policy-iata",
+        "field": "aircraft.operator_iata",
+        "target_field": "airline"
+      }
+    },
+    {
+      "script": {
+        "description": "create a baro_altitude_feet field from baro_altitude in meters",
+        "if": "ctx.baro_altitude != null",
+        "lang": "painless",
+        "source": "ctx.baro_altitude_feet = Math.round(Double.parseDouble(ctx.baro_altitude) * 3.28084)"
+      }
+    },
+    {
+      "script": {
+        "description": "create a geo_altitude_feet field from geo_altitude in meters",
+        "if": "ctx.geo_altitude != null",
+        "lang": "painless",
+        "source": "ctx.geo_altitude_feet = Math.round(Double.parseDouble(ctx.geo_altitude) * 3.28084)"
+      }
+    },
+    {
+      "script": {
+        "description": "create a velocity_mph field velocity in meters per second",
+        "if": "ctx.velocity != null",
+        "lang": "painless",
+        "source": "ctx.velocity_mph = Math.round(Double.parseDouble(ctx.velocity) * 2.23694)"
+      }
+    }
+  ]
+}
+
+PUT _ilm/policy/flights
+{
+  "policy": {
+    "phases": {
+      "hot": {
+        "min_age": "0ms",
+        "actions": {
+          "rollover": {
+            "max_primary_shard_size": "10gb",
+            "max_age": "2d"
+          },
+          "set_priority": {
+            "priority": 100
+          }
+        }
+      },
+      "delete": {
+        "min_age": "5d",
+        "actions": {
+          "delete": {
+            "delete_searchable_snapshot": true
+          }
+        }
+      }
+    }
+  }
+}
+
+PUT _template/flights
+{
+  "flights" : {
+    "order" : 0,
+    "index_patterns" : [
+      "flights-*"
+    ],
+    "settings" : {
+      "index" : {
+        "lifecycle" : {
+          "name" : "flights",
+          "rollover_alias" : "flights"
+        },
+        "number_of_shards" : "1",
+        "number_of_replicas" : "1"
+      }
+    },
+    "mappings" : {
+      "properties" : {
+        "geo_altitude" : {
+          "type" : "float"
+        },
+        "aircraft" : {
+          "type" : "object",
+          "properties" : {
+            "first_flight_date" : {
+              "format" : "iso8601",
+              "type" : "date"
+            },
+            "reg_until" : {
+              "format" : "iso8601",
+              "type" : "date"
+            },
+            "modes" : {
+              "type" : "boolean"
+            },
+            "notes" : {
+              "type" : "text"
+            },
+            "acars" : {
+              "type" : "boolean"
+            },
+            "registered" : {
+              "format" : "iso8601",
+              "type" : "date"
+            },
+            "test_reg" : {
+              "type" : "keyword"
+            },
+            "operator" : {
+              "type" : "keyword"
+            },
+            "category_description" : {
+              "type" : "keyword"
+            },
+            "engines" : {
+              "type" : "text",
+              "fields" : {
+                "keyword" : {
+                  "ignore_above" : 256,
+                  "type" : "keyword"
+                }
+              }
+            },
+            "line_number" : {
+              "type" : "keyword"
+            },
+            "model" : {
+              "type" : "keyword"
+            },
+            "adsb" : {
+              "type" : "boolean"
+            },
+            "owner" : {
+              "type" : "text",
+              "fields" : {
+                "keyword" : {
+                  "ignore_above" : 256,
+                  "type" : "keyword"
+                }
+              }
+            },
+            "built" : {
+              "format" : "iso8601",
+              "type" : "date"
+            },
+            "manufacturer_icao" : {
+              "type" : "keyword"
+            },
+            "icao_aircraft_type" : {
+              "type" : "keyword"
+            },
+            "manufacturer_name" : {
+              "type" : "text"
+            },
+            "serial_umber" : {
+              "type" : "keyword"
+            },
+            "operator_callsign" : {
+              "type" : "keyword"
+            },
+            "operator_iata" : {
+              "type" : "keyword"
+            },
+            "operator_icao" : {
+              "type" : "keyword"
+            },
+            "icao" : {
+              "type" : "keyword"
+            },
+            "registration" : {
+              "type" : "keyword"
+            },
+            "type_code" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "true_track" : {
+          "type" : "float"
+        },
+        "velocity" : {
+          "type" : "float"
+        },
+        "velocity_mph" : {
+          "type" : "float"
+        },
+        "spi" : {
+          "type" : "boolean"
+        },
+        "origin_country" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          }
+        },
+        "geo_altitude_feet" : {
+          "type" : "float"
+        },
+        "squawk" : {
+          "type" : "keyword"
+        },
+        "@timestamp" : {
+          "type" : "date"
+        },
+        "request_time" : {
+          "format" : "epoch_second",
+          "type" : "date"
+        },
+        "baro_altitude" : {
+          "type" : "float"
+        },
+        "time_position" : {
+          "format" : "epoch_second",
+          "type" : "date"
+        },
+        "last_contact" : {
+          "format" : "epoch_second",
+          "type" : "date"
+        },
+        "callsign" : {
+          "type" : "keyword"
+        },
+        "icao" : {
+          "type" : "keyword"
+        },
+        "baro_altitude_feet" : {
+          "type" : "float"
+        },
+        "location" : {
+          "type" : "geo_point"
+        },
+        "airline" : {
+          "dynamic" : true,
+          "type" : "object",
+          "enabled" : true,
+          "properties" : {
+            "country" : {
+              "type" : "keyword"
+            },
+            "iata" : {
+              "type" : "keyword"
+            },
+            "name" : {
+              "type" : "text"
+            },
+            "icao" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "on_ground" : {
+          "type" : "boolean"
+        },
+        "position_source" : {
+          "type" : "keyword"
+        },
+        "vertical_rate" : {
+          "type" : "float"
+        }
+      }
+    }
+  }
+}
+
+PUT aircraft
+{
+  "mappings": {
+    "properties": {
+      "acars": {
+        "type": "boolean"
+      },
+      "adsb": {
+        "type": "boolean"
+      },
+      "built": {
+        "type": "date",
+        "format": "iso8601"
+      },
+      "category_description": {
+        "type": "keyword"
+      },
+      "engines": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "first_flight_date": {
+        "type": "date",
+        "format": "iso8601"
+      },
+      "icao": {
+        "type": "keyword"
+      },
+      "icao_aircraft_type": {
+        "type": "keyword"
+      },
+      "line_number": {
+        "type": "keyword"
+      },
+      "manufacturer_icao": {
+        "type": "keyword"
+      },
+      "manufacturer_name": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "model": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "modes": {
+        "type": "boolean"
+      },
+      "notes": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "operator": {
+        "type": "keyword"
+      },
+      "operator_callsign": {
+        "type": "keyword"
+      },
+      "operator_iata": {
+        "type": "keyword"
+      },
+      "operator_icao": {
+        "type": "keyword"
+      },
+      "owner": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "reg_until": {
+        "type": "date",
+        "format": "iso8601"
+      },
+      "registered": {
+        "type": "date",
+        "format": "iso8601"
+      },
+      "registration": {
+        "type": "keyword"
+      },
+      "serial_number": {
+        "type": "keyword"
+      },
+      "test_reg": {
+        "type": "keyword"
+      },
+      "type_code": {
+        "type": "keyword"
+      }
+    }
+  }
+}
+
+PUT airlines
+{
+  "mappings": {
+    "properties": {
+      "alias": {
+        "type": "keyword"
+      },
+      "callsign": {
+        "type": "text"
+      },
+      "country": {
+        "type": "keyword"
+      },
+      "iata": {
+        "type": "keyword"
+      },
+      "icao": {
+        "type": "keyword"
+      },
+      "name": {
+        "type": "text"
+      }
+    }
+  }
+}
+
+PUT /flights-000001
+{
+  "aliases": {
+    "flights": { "is_write_index": true }
+  }
+}

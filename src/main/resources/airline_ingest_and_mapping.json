@@ -1,0 +1,63 @@
+# mapping
+{
+  "properties": {
+    "alias": {
+      "type": "keyword"
+    },
+    "callsign": {
+      "type": "keyword"
+    },
+    "column1": {
+      "type": "long"
+    },
+    "column8": {
+      "type": "keyword"
+    },
+    "country": {
+      "type": "keyword"
+    },
+    "iata": {
+      "type": "keyword"
+    },
+    "icao": {
+      "type": "keyword"
+    },
+    "name": {
+      "type": "text",
+      "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+    }
+  }
+}
+
+# pipeline
+{
+  "description": "Ingest pipeline created by text structure finder",
+  "processors": [
+    {
+      "csv": {
+        "field": "message",
+        "target_fields": [
+          "column1",
+          "name",
+          "alias",
+          "iata",
+          "icao",
+          "callsign",
+          "country",
+          "column8"
+        ],
+        "ignore_missing": false
+      }
+    },
+    {
+      "remove": {
+        "field": ["message","column1","column8"]
+      }
+    }
+  ]
+}

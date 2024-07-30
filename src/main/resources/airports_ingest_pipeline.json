@@ -1,0 +1,15 @@
+{
+    "processors": [
+        {
+            "set": {
+                "field": "location",
+                "value": "{{lat}},{{lon}}"
+            }
+        },
+        {
+            "remove": {
+                "field": ["lat","lon","dd-1","dd-2","dd-3","dd-4"]
+            }
+        }
+    ]
+}

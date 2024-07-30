@@ -1,0 +1,35 @@
+PUT _enrich/policy/flights_policy
+{
+  "match": {
+    "indices": "aircraft2",
+    "match_field": "icao",
+    "enrich_fields": [
+      "acars",
+      "adsb",
+      "built",
+      "categoryDescription",
+      "engines",
+      "firstFlightDate",
+      "icaoAircraftType",
+      "lineNumber",
+      "manfacturerIcao",
+      "manufacturerName",
+      "model",
+      "modes",
+      "notes",
+      "operator",
+      "operatorCallsign",
+      "operatorIata",
+      "operatorIcao",
+      "owner",
+      "regUntil",
+      "registered",
+      "registration",
+      "seatConfiguration",
+      "serialNumber",
+      "status",
+      "testReg",
+      "typeCode"
+    ]
+  }
+}

@@ -1,117 +1,103 @@
 {
-  "mappings": {
-    "properties": {
-      "acars": {
-        "type": "boolean"
-      },
-      "adsb": {
-        "type": "boolean"
-      },
-      "built": {
-        "type": "keyword"
-      },
-      "categoryDescription": {
-        "type": "keyword"
-      },
-      "engines": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
+  "mapping": {
+      "properties": {
+        "acars": {
+          "type": "boolean"
+        },
+        "adsb": {
+          "type": "boolean"
+        },
+        "built": {
+          "type": "date",
+          "format": "iso8601"
+        },
+        "category_description": {
+          "type": "keyword"
+        },
+        "engines": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
           }
-        }
-      },
-      "firstFlightDate": {
-        "type": "keyword"
-      },
-      "icao": {
-        "type": "keyword"
-      },
-      "icaoAircraftType": {
-        "type": "keyword"
-      },
-      "lineNumber": {
-        "type": "keyword"
-      },
-      "manufacturerIcao": {
-        "type": "keyword"
-      },
-      "manufacturerName": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
+        },
+        "first_flight_date": {
+          "type": "date",
+          "format": "iso8601"
+        },
+        "icao": {
+          "type": "keyword"
+        },
+        "icao_aircraft_type": {
+          "type": "keyword"
+        },
+        "line_number": {
+          "type": "keyword"
+        },
+        "manufacturer_icao": {
+          "type": "keyword"
+        },
+        "manufacturer_name": {
+          "type": "text"
+        },
+        "model": {
+          "type": "keyword"
+        },
+        "modes": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
           }
-        }
-      },
-      "model": {
-        "type": "keyword"
-      },
-      "modes": {
-        "type": "boolean"
-      },
-      "notes": {
-        "type": "text"
-      },
-      "operator": {
-        "type": "keyword"
-      },
-      "operatorCallsign": {
-        "type": "keyword"
-      },
-      "operatorIata": {
-        "type": "keyword"
-      },
-      "operatorIcao": {
-        "type": "keyword"
-      },
-      "owner": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
+        },
+        "operator": {
+          "type": "keyword"
+        },
+        "operator_iata": {
+          "type": "keyword"
+        },
+        "operator_callsign": {
+          "type": "keyword"
+        },
+        "operator_icao": {
+          "type": "keyword"
+        },
+        "owner": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
           }
+        },
+        "registered": {
+          "type": "date",
+          "format": "iso8601"
+        },
+        "registration": {
+          "type": "keyword"
+        },
+        "reg_until": {
+          "type": "date",
+          "format": "iso8601"
+        },
+        "serial_umber": {
+          "type": "keyword"
+        },
+        "test_reg": {
+          "type": "keyword"
+        },
+        "type_code": {
+          "type": "keyword"
         }
-      },
-      "regUntil": {
-        "type": "keyword"
-      },
-      "registered": {
-        "type": "keyword"
-      },
-      "registration": {
-        "type": "keyword"
-      },
-      "seatConfiguration": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
-          }
-        }
-      },
-      "serialNumber": {
-        "type": "keyword"
-      },
-      "status": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
-          }
-        }
-      },
-      "testReg": {
-        "type": "keyword"
-      },
-      "typeCode": {
-        "type": "keyword"
       }
     }
   }
-}

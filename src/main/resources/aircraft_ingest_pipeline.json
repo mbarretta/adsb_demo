@@ -1,0 +1,66 @@
+{
+  "description": "Ingest pipeline created by text structure finder",
+  "processors": [
+    {
+      "csv": {
+        "field": "message",
+        "target_fields": [
+          "icao",
+          "registration",
+          "manufacturer_icao",
+          "manufacturer_name",
+          "model",
+          "type_code",
+          "serial_number",
+          "line_number",
+          "icao_aircraft_type",
+          "operator",
+          "operator_callsign",
+          "operator_icao",
+          "operator_iata",
+          "owner",
+          "test_reg",
+          "registered",
+          "reg_until",
+          "status",
+          "built",
+          "first_flight_date",
+          "seat_configuration",
+          "engines",
+          "modes",
+          "adsb",
+          "acars",
+          "notes",
+          "category_description"
+        ],
+        "ignore_missing": false
+      }
+    },
+    {
+      "convert": {
+        "field": "acars",
+        "type": "boolean",
+        "ignore_missing": true
+      }
+    },
+    {
+      "convert": {
+        "field": "adsb",
+        "type": "boolean",
+        "ignore_missing": true
+      }
+    },
+    {
+      "convert": {
+        "field": "modes",
+        "type": "boolean",
+        "ignore_missing": true
+      }
+    },
+    {
+      "remove": {
+        "field": "message"
+      }
+    }
+  ]
+}
